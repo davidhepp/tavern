@@ -1,10 +1,14 @@
+import { randomBytes, randomUUID } from "node:crypto";
 import { authQueryKeys } from "@better-auth-ui/core";
+import { and, desc, eq, inArray, isNull } from "drizzle-orm";
 import { dehydrate, HydrationBoundary } from "@tanstack/react-query";
 import {
   Ban,
+  History,
   KeyRound,
   LogIn,
   ShieldCheck,
+  Ticket,
   Trash2,
   UserCog,
   UserPlus,
@@ -30,14 +34,18 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { auth } from "@/lib/auth";
+import { db } from "@/lib/db";
 import { getQueryClient } from "@/lib/query-client";
 import { cn } from "@/lib/utils";
+import { invitationCode, user as userTable } from "@/schema";
 
 type ListUsersResult = Awaited<ReturnType<typeof auth.api.listUsers>>;
 type AdminUser = ListUsersResult["users"][number];
 type UserSession = Awaited<
   ReturnType<typeof auth.api.listUserSessions>
 >["sessions"][number];
+type InvitationCode = typeof invitationCode.$inferSelect;
+type InvitationUser = Pick<typeof userTable.$inferSelect, "id" | "name" | "email">;
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
@@ -52,8 +60,36 @@ function roleFrom(formData: FormData) {
   return valueFrom(formData, "role") === "admin" ? "admin" : "user";
 }
 
+function generateInvitationCode() {
+  return randomBytes(6).toString("hex").toUpperCase();
+}
+
 async function requestHeaders() {
   return headers();
+}
+
+async function requireAdminSession() {
+  const requestHeaderList = await requestHeaders();
+  const session = await auth.api.getSession({ headers: requestHeaderList });
+
+  if (!session) {
+    redirect("/auth/sign-in");
+  }
+
+  const permission = await auth.api.userHasPermission({
+    body: {
+      userId: session.user.id,
+      permissions: {
+        user: ["list"],
+      },
+    },
+  });
+
+  if (!permission.success) {
+    forbidden();
+  }
+
+  return { session, headers: requestHeaderList };
 }
 
 async function createUserAction(formData: FormData) {
@@ -72,6 +108,40 @@ async function createUserAction(formData: FormData) {
     },
     headers: await requestHeaders(),
   });
+
+  revalidatePath("/admin");
+}
+
+async function createInvitationAction(formData: FormData) {
+  "use server";
+
+  const { session } = await requireAdminSession();
+
+  await db.insert(invitationCode).values({
+    id: randomUUID(),
+    code: generateInvitationCode(),
+    note: valueFrom(formData, "note") || null,
+    createdBy: session.user.id,
+  });
+
+  revalidatePath("/admin");
+}
+
+async function revokeInvitationAction(formData: FormData) {
+  "use server";
+
+  await requireAdminSession();
+
+  await db
+    .update(invitationCode)
+    .set({ revokedAt: new Date(), updatedAt: new Date() })
+    .where(
+      and(
+        eq(invitationCode.id, valueFrom(formData, "invitationId")),
+        isNull(invitationCode.usedAt),
+        isNull(invitationCode.revokedAt),
+      ),
+    );
 
   revalidatePath("/admin");
 }
@@ -219,6 +289,11 @@ function formatDate(value: Date | string | null | undefined) {
   }).format(new Date(value));
 }
 
+function formatUser(user: InvitationUser | undefined) {
+  if (!user) return "Unknown";
+  return `${user.name || "Unnamed user"} <${user.email}>`;
+}
+
 export default async function AdminPage({
   searchParams,
 }: {
@@ -283,6 +358,32 @@ export default async function AdminPage({
       headers: requestHeaderList,
     }));
 
+  const invitations = await db
+    .select()
+    .from(invitationCode)
+    .orderBy(desc(invitationCode.createdAt))
+    .limit(50);
+  const invitationUserIds = Array.from(
+    new Set(
+      invitations
+        .flatMap((invitation) => [invitation.createdBy, invitation.usedBy])
+        .filter((id): id is string => Boolean(id)),
+    ),
+  );
+  const invitationUsers = invitationUserIds.length
+    ? await db
+        .select({
+          id: userTable.id,
+          name: userTable.name,
+          email: userTable.email,
+        })
+        .from(userTable)
+        .where(inArray(userTable.id, invitationUserIds))
+    : [];
+  const invitationUserById = new Map(
+    invitationUsers.map((user) => [user.id, user]),
+  );
+
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>
       <main className="min-h-dvh bg-background">
@@ -291,7 +392,7 @@ export default async function AdminPage({
             <div>
               <p className="text-sm text-muted-foreground">Admin</p>
               <h1 className="text-2xl font-semibold tracking-normal">
-                User management
+                Accounts
               </h1>
             </div>
 
@@ -305,20 +406,6 @@ export default async function AdminPage({
               <UserButton size="icon" align="end" />
             </div>
           </header>
-
-          <section className="grid gap-4 md:grid-cols-3">
-            <MetricCard title="Users" value={usersResult.total.toString()} note="Total accounts" />
-            <MetricCard
-              title="Listed"
-              value={usersResult.users.length.toString()}
-              note={`Page ${page}`}
-            />
-            <MetricCard
-              title="Permissions"
-              value={permission.success ? "Granted" : "Limited"}
-              note="Admin API check"
-            />
-          </section>
 
           {session.session.impersonatedBy ? (
             <Card>
@@ -345,7 +432,8 @@ export default async function AdminPage({
                 <CardHeader>
                   <CardTitle>Users</CardTitle>
                   <CardDescription>
-                    Search, inspect, and manage accounts through Better Auth admin endpoints.
+                    {usersResult.total} accounts. Select a user to manage roles,
+                    sessions, bans, and profile details.
                   </CardDescription>
                   <CardAction>
                     <form className="flex gap-2" action="/admin">
@@ -401,9 +489,14 @@ export default async function AdminPage({
               </Card>
 
               <CreateUserCard />
+              <InvitationHistoryCard
+                invitations={invitations}
+                usersById={invitationUserById}
+              />
             </div>
 
             <aside className="flex flex-col gap-4">
+              <CreateInvitationCard />
               {selectedUser ? (
                 <>
                   <UserDetailCard user={selectedUser} />
@@ -432,28 +525,6 @@ export default async function AdminPage({
   );
 }
 
-function MetricCard({
-  title,
-  value,
-  note,
-}: {
-  title: string;
-  value: string;
-  note: string;
-}) {
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{title}</CardTitle>
-        <CardDescription>{note}</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <div className="text-3xl font-semibold">{value}</div>
-      </CardContent>
-    </Card>
-  );
-}
-
 function UserRow({ user, selected }: { user: AdminUser; selected: boolean }) {
   return (
     <div
@@ -478,8 +549,137 @@ function UserRow({ user, selected }: { user: AdminUser; selected: boolean }) {
         <p className="text-xs text-muted-foreground">Created {formatDate(user.createdAt)}</p>
       </div>
       <Button variant={selected ? "default" : "outline"} asChild>
-        <Link href={`/admin?userId=${user.id}`}>Manage</Link>
+        <Link href={`/admin?userId=${user.id}`}>Open</Link>
       </Button>
+    </div>
+  );
+}
+
+function CreateInvitationCard() {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Ticket className="size-4" />
+          Invitation code
+        </CardTitle>
+        <CardDescription>
+          Generate a one-time code for email and password registration.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <form action={createInvitationAction} className="grid gap-3">
+          <Field label="Internal note">
+            <Textarea
+              name="note"
+              placeholder="Who this invite is for, request context, or ticket reference"
+            />
+          </Field>
+          <Button type="submit">
+            <Ticket />
+            Generate code
+          </Button>
+        </form>
+      </CardContent>
+    </Card>
+  );
+}
+
+function InvitationHistoryCard({
+  invitations,
+  usersById,
+}: {
+  invitations: InvitationCode[];
+  usersById: Map<string, InvitationUser>;
+}) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <History className="size-4" />
+          Invitation history
+        </CardTitle>
+        <CardDescription>
+          Latest generated codes, who made them, and which account claimed each
+          code.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {invitations.length ? (
+          invitations.map((invitation) => (
+            <InvitationRow
+              key={invitation.id}
+              invitation={invitation}
+              creator={
+                invitation.createdBy
+                  ? usersById.get(invitation.createdBy)
+                  : undefined
+              }
+              usedBy={
+                invitation.usedBy ? usersById.get(invitation.usedBy) : undefined
+              }
+            />
+          ))
+        ) : (
+          <p className="text-sm text-muted-foreground">
+            No invitation codes have been generated yet.
+          </p>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function InvitationRow({
+  invitation,
+  creator,
+  usedBy,
+}: {
+  invitation: InvitationCode;
+  creator?: InvitationUser;
+  usedBy?: InvitationUser;
+}) {
+  const status = invitation.revokedAt
+    ? "Revoked"
+    : invitation.usedAt
+      ? "Used"
+      : invitation.claimedAt
+        ? "Claimed"
+        : "Open";
+
+  return (
+    <div className="rounded-lg border p-3">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+        <div className="min-w-0 space-y-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <code className="rounded bg-muted px-2 py-1 text-sm font-semibold">
+              {invitation.code}
+            </code>
+            <span className="rounded-md bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">
+              {status}
+            </span>
+          </div>
+          <div className="grid gap-1 text-sm text-muted-foreground md:grid-cols-2">
+            <span>Created {formatDate(invitation.createdAt)}</span>
+            <span>By {formatUser(creator)}</span>
+            <span>Claimed by {invitation.claimedEmail || "Nobody"}</span>
+            <span>Used by {formatUser(usedBy)}</span>
+            <span>Used {formatDate(invitation.usedAt)}</span>
+            <span>Revoked {formatDate(invitation.revokedAt)}</span>
+          </div>
+          {invitation.note ? (
+            <p className="text-sm text-muted-foreground">{invitation.note}</p>
+          ) : null}
+        </div>
+        {!invitation.usedAt && !invitation.revokedAt ? (
+          <form action={revokeInvitationAction}>
+            <input type="hidden" name="invitationId" value={invitation.id} />
+            <Button type="submit" size="sm" variant="outline">
+              Revoke
+            </Button>
+          </form>
+        ) : null}
+      </div>
     </div>
   );
 }

@@ -114,6 +114,7 @@ export function SignUp({
   const [fieldErrors, setFieldErrors] = useState<{
     name?: string
     email?: string
+    invitationCode?: string
     password?: string
     confirmPassword?: string
   }>({})
@@ -125,6 +126,7 @@ export function SignUp({
     // `emailAndPassword.name === false` hides the name field and submits "".
     const name = (formData.get("name") as string | null) ?? ""
     const email = formData.get("email") as string
+    const invitationCode = formData.get("invitationCode") as string
 
     if (emailAndPassword?.confirmPassword && password !== confirmPassword) {
       toast.error(localization.auth.passwordsDoNotMatch)
@@ -156,17 +158,24 @@ export function SignUp({
       }
     }
 
-    signUpEmail({
+    const signUpPayload = {
       name,
       email,
       password,
       ...additionalFieldValues,
+      invitationCode,
       fetchOptions
-    })
+    } as Parameters<typeof signUpEmail>[0] & { invitationCode: string }
+
+    signUpEmail(signUpPayload)
   }
 
+  const showSocialProviders = false
   const showSeparator =
-    emailAndPassword?.enabled && socialProviders && socialProviders.length > 0
+    emailAndPassword?.enabled &&
+    showSocialProviders &&
+    socialProviders &&
+    socialProviders.length > 0
 
   return (
     <Card className={cn("w-full max-w-sm", className)}>
@@ -180,7 +189,7 @@ export function SignUp({
         <div className="flex flex-col gap-6">
           {socialPosition === "top" && (
             <>
-              {socialProviders && socialProviders.length > 0 && (
+              {showSocialProviders && socialProviders && socialProviders.length > 0 && (
                 <ProviderButtons socialLayout={socialLayout} />
               )}
 
@@ -257,6 +266,38 @@ export function SignUp({
                   />
 
                   <FieldError>{fieldErrors.email}</FieldError>
+                </Field>
+
+                <Field data-invalid={!!fieldErrors.invitationCode}>
+                  <Label htmlFor="invitationCode">Invitation code</Label>
+
+                  <Input
+                    id="invitationCode"
+                    name="invitationCode"
+                    type="text"
+                    autoComplete="one-time-code"
+                    placeholder="Enter your invite code"
+                    required
+                    disabled={isPending}
+                    onChange={() => {
+                      setFieldErrors((prev) => ({
+                        ...prev,
+                        invitationCode: undefined
+                      }))
+                    }}
+                    onInvalid={(e) => {
+                      e.preventDefault()
+
+                      setFieldErrors((prev) => ({
+                        ...prev,
+                        invitationCode: (e.target as HTMLInputElement)
+                          .validationMessage
+                      }))
+                    }}
+                    aria-invalid={!!fieldErrors.invitationCode}
+                  />
+
+                  <FieldError>{fieldErrors.invitationCode}</FieldError>
                 </Field>
 
                 {additionalFields?.map(
@@ -441,7 +482,7 @@ export function SignUp({
                 </FieldSeparator>
               )}
 
-              {socialProviders && socialProviders.length > 0 && (
+              {showSocialProviders && socialProviders && socialProviders.length > 0 && (
                 <ProviderButtons socialLayout={socialLayout} />
               )}
             </>

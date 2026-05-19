@@ -60,7 +60,8 @@ export const auth = betterAuth({
             });
           }
 
-          const { invitationCode: _invitationCode, ...userData } = user;
+          const userData = { ...user };
+          delete userData.invitationCode;
 
           return { data: userData };
         },
