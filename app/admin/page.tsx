@@ -299,6 +299,9 @@ export default async function AdminPage({
               <Button variant="outline" asChild>
                 <Link href="/">Dashboard</Link>
               </Button>
+              <Button variant="outline" asChild>
+                <Link href="/admin/games">Game library</Link>
+              </Button>
               <UserButton size="icon" align="end" />
             </div>
           </header>

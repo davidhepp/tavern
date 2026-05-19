@@ -1,5 +1,13 @@
 import { relations } from "drizzle-orm";
-import { pgTable, text, timestamp, boolean, index } from "drizzle-orm/pg-core";
+import {
+  boolean,
+  index,
+  integer,
+  pgTable,
+  text,
+  timestamp,
+  uniqueIndex,
+} from "drizzle-orm/pg-core";
 
 export const user = pgTable("user", {
   id: text("id").primaryKey(),
@@ -78,9 +86,75 @@ export const verification = pgTable(
   (table) => [index("verification_identifier_idx").on(table.identifier)],
 );
 
+export const game = pgTable(
+  "game",
+  {
+    id: text("id").primaryKey(),
+    slug: text("slug").notNull(),
+    title: text("title").notNull(),
+    summary: text("summary").notNull(),
+    coverUrl: text("cover_url"),
+    platform: text("platform"),
+    status: text("status").default("active").notNull(),
+    createdBy: text("created_by").references(() => user.id, {
+      onDelete: "set null",
+    }),
+    updatedBy: text("updated_by").references(() => user.id, {
+      onDelete: "set null",
+    }),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .$onUpdate(() => /* @__PURE__ */ new Date())
+      .notNull(),
+  },
+  (table) => [
+    uniqueIndex("game_slug_idx").on(table.slug),
+    index("game_status_idx").on(table.status),
+  ],
+);
+
+export const gameResource = pgTable(
+  "game_resource",
+  {
+    id: text("id").primaryKey(),
+    gameId: text("game_id")
+      .notNull()
+      .references(() => game.id, { onDelete: "cascade" }),
+    title: text("title").notNull(),
+    url: text("url").notNull(),
+    resourceType: text("resource_type").default("link").notNull(),
+    description: text("description"),
+    sortOrder: integer("sort_order").default(0).notNull(),
+    createdBy: text("created_by").references(() => user.id, {
+      onDelete: "set null",
+    }),
+    updatedBy: text("updated_by").references(() => user.id, {
+      onDelete: "set null",
+    }),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .$onUpdate(() => /* @__PURE__ */ new Date())
+      .notNull(),
+  },
+  (table) => [
+    index("game_resource_game_id_idx").on(table.gameId),
+    index("game_resource_type_idx").on(table.resourceType),
+  ],
+);
+
 export const userRelations = relations(user, ({ many }) => ({
   sessions: many(session),
   accounts: many(account),
+  createdGames: many(game, { relationName: "createdGames" }),
+  updatedGames: many(game, { relationName: "updatedGames" }),
+  createdGameResources: many(gameResource, {
+    relationName: "createdGameResources",
+  }),
+  updatedGameResources: many(gameResource, {
+    relationName: "updatedGameResources",
+  }),
 }));
 
 export const sessionRelations = relations(session, ({ one }) => ({
@@ -94,5 +168,36 @@ export const accountRelations = relations(account, ({ one }) => ({
   user: one(user, {
     fields: [account.userId],
     references: [user.id],
+  }),
+}));
+
+export const gameRelations = relations(game, ({ many, one }) => ({
+  resources: many(gameResource),
+  creator: one(user, {
+    fields: [game.createdBy],
+    references: [user.id],
+    relationName: "createdGames",
+  }),
+  updater: one(user, {
+    fields: [game.updatedBy],
+    references: [user.id],
+    relationName: "updatedGames",
+  }),
+}));
+
+export const gameResourceRelations = relations(gameResource, ({ one }) => ({
+  game: one(game, {
+    fields: [gameResource.gameId],
+    references: [game.id],
+  }),
+  creator: one(user, {
+    fields: [gameResource.createdBy],
+    references: [user.id],
+    relationName: "createdGameResources",
+  }),
+  updater: one(user, {
+    fields: [gameResource.updatedBy],
+    references: [user.id],
+    relationName: "updatedGameResources",
   }),
 }));
