@@ -31,7 +31,15 @@ const platformOptions = [
   "Web",
 ];
 
-const resourceTypes = ["link", "file", "guide", "mod", "save", "tool"];
+const resourceTypes = [
+  "link",
+  "file",
+  "game files",
+  "guide",
+  "mod",
+  "save",
+  "tool",
+];
 
 function slugify(value: string) {
   return value

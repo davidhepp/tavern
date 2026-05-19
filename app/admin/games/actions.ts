@@ -24,7 +24,7 @@ function slugify(value: string) {
 
 function resourceTypeFrom(formData: FormData) {
   const value = valueFrom(formData, "resourceType");
-  return ["file", "guide", "mod", "save", "tool"].includes(value)
+  return ["file", "game files", "guide", "mod", "save", "tool"].includes(value)
     ? value
     : "link";
 }
