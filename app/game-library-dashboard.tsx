@@ -8,7 +8,6 @@ import {
   LinkIcon,
   Search,
   Settings,
-  ShieldCheck,
 } from "lucide-react";
 import Link from "next/link";
 import { useDeferredValue, useMemo, useState } from "react";

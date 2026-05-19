@@ -1,29 +1,29 @@
-"use client"
+"use client";
 
 import {
   useAuth,
   useFetchOptions,
-  useRequestPasswordReset
-} from "@better-auth-ui/react"
-import { type SyntheticEvent, useState } from "react"
-import { toast } from "sonner"
+  useRequestPasswordReset,
+} from "@better-auth-ui/react";
+import { type SyntheticEvent, useState } from "react";
+import { toast } from "sonner";
 
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Field,
   FieldDescription,
   FieldError,
-  FieldGroup
-} from "@/components/ui/field"
-import { Input } from "@/components/ui/input"
-import { Spinner } from "@/components/ui/spinner"
-import { cn } from "@/lib/utils"
-import { Label } from "../ui/label"
+  FieldGroup,
+} from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import { Spinner } from "@/components/ui/spinner";
+import { cn } from "@/lib/utils";
+import { Label } from "../ui/label";
 
 export type ForgotPasswordProps = {
-  className?: string
-}
+  className?: string;
+};
 
 /**
  * Render a card-based "Forgot Password" form that sends a password-reset email.
@@ -36,37 +36,37 @@ export type ForgotPasswordProps = {
  */
 export function ForgotPassword({ className }: ForgotPasswordProps) {
   const { authClient, basePaths, localization, plugins, viewPaths, Link } =
-    useAuth()
+    useAuth();
 
-  const { fetchOptions, resetFetchOptions } = useFetchOptions()
+  const { fetchOptions, resetFetchOptions } = useFetchOptions();
 
   const { mutate: requestPasswordReset, isPending } = useRequestPasswordReset(
     authClient,
     {
       onError: (error) => {
-        toast.error(error.error?.message || error.message)
-        resetFetchOptions()
+        toast.error(error.error?.message || error.message);
+        resetFetchOptions();
       },
-      onSuccess: () => toast.success(localization.auth.passwordResetEmailSent)
-    }
-  )
+      onSuccess: () => toast.success(localization.auth.passwordResetEmailSent),
+    },
+  );
 
   function handleSubmit(e: SyntheticEvent<HTMLFormElement>) {
-    e.preventDefault()
-    const formData = new FormData(e.currentTarget)
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
     requestPasswordReset({
       email: formData.get("email") as string,
-      fetchOptions
-    })
+      fetchOptions,
+    });
   }
 
   const Captcha = plugins.find(
-    (plugin) => plugin.captchaComponent
-  )?.captchaComponent
+    (plugin) => plugin.captchaComponent,
+  )?.captchaComponent;
 
   const [fieldErrors, setFieldErrors] = useState<{
-    email?: string
-  }>({})
+    email?: string;
+  }>({});
 
   return (
     <Card className={cn("w-full max-w-sm", className)}>
@@ -93,23 +93,22 @@ export function ForgotPassword({ className }: ForgotPasswordProps) {
                 onChange={() => {
                   setFieldErrors((prev) => ({
                     ...prev,
-                    email: undefined
-                  }))
+                    email: undefined,
+                  }));
                 }}
                 onInvalid={(e) => {
-                  e.preventDefault()
+                  e.preventDefault();
 
                   setFieldErrors((prev) => ({
                     ...prev,
-                    email: (e.target as HTMLInputElement).validationMessage
-                  }))
+                    email: (e.target as HTMLInputElement).validationMessage,
+                  }));
                 }}
                 aria-invalid={!!fieldErrors.email}
               />
 
               <FieldError>{fieldErrors.email}</FieldError>
             </Field>
-
             {Captcha && <div className="flex justify-center">{Captcha}</div>}
 
             <div className="flex flex-col gap-3">
@@ -135,5 +134,5 @@ export function ForgotPassword({ className }: ForgotPasswordProps) {
         </div>
       </CardContent>
     </Card>
-  )
+  );
 }
