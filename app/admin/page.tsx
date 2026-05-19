@@ -19,7 +19,7 @@ import Link from "next/link";
 import { forbidden, redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 
-import { UserButton } from "@/components/auth/user/user-button";
+import { AdminNav } from "@/app/admin/admin-nav";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -47,6 +47,7 @@ type UserSession = Awaited<
 >["sessions"][number];
 type InvitationCode = typeof invitationCode.$inferSelect;
 type InvitationUser = Pick<typeof userTable.$inferSelect, "id" | "name" | "email">;
+type InvitationStatus = "all" | "open" | "used" | "revoked";
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
@@ -296,6 +297,18 @@ function formatUser(user: InvitationUser | undefined) {
   return `${user.name || "Unnamed user"} <${user.email}>`;
 }
 
+function invitationStatusOf(invitation: InvitationCode) {
+  if (invitation.revokedAt) return "revoked";
+  if (invitation.usedAt) return "used";
+  return "open";
+}
+
+function invitationFilterFrom(value: string | undefined): InvitationStatus {
+  return value === "open" || value === "used" || value === "revoked"
+    ? value
+    : "all";
+}
+
 export default async function AdminPage({
   searchParams,
 }: {
@@ -314,6 +327,7 @@ export default async function AdminPage({
   const page = Math.max(Number(firstParam(params.page) ?? "1"), 1);
   const search = firstParam(params.search)?.trim() ?? "";
   const selectedUserId = firstParam(params.userId);
+  const invitationFilter = invitationFilterFrom(firstParam(params.invites));
   const offset = (page - 1) * pageSize;
 
   const permission = await auth.api.userHasPermission({
@@ -369,10 +383,27 @@ export default async function AdminPage({
     .from(invitationCode)
     .orderBy(desc(invitationCode.createdAt))
     .limit(50);
+  const filteredInvitations =
+    invitationFilter === "all"
+      ? invitations
+      : invitations.filter(
+          (invitation) => invitationStatusOf(invitation) === invitationFilter,
+        );
+  const selectedUserInvitation = selectedUser
+    ? await db
+        .select()
+        .from(invitationCode)
+        .where(eq(invitationCode.usedBy, selectedUser.id))
+        .limit(1)
+        .then((rows) => rows[0] ?? null)
+    : null;
   const invitationUserIds = Array.from(
     new Set(
-      invitations
-        .flatMap((invitation) => [invitation.createdBy, invitation.usedBy])
+      [...invitations, ...(selectedUserInvitation ? [selectedUserInvitation] : [])]
+        .flatMap((invitation) => [
+          invitation.createdBy,
+          invitation.usedBy,
+        ])
         .filter((id): id is string => Boolean(id)),
     ),
   );
@@ -394,22 +425,14 @@ export default async function AdminPage({
     <HydrationBoundary state={dehydrate(queryClient)}>
       <main className="min-h-dvh bg-background">
         <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-4 md:px-6 md:py-6">
-          <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <AdminNav />
+
+          <header>
             <div>
               <p className="text-sm text-muted-foreground">Admin</p>
               <h1 className="text-2xl font-semibold tracking-normal">
                 Accounts
               </h1>
-            </div>
-
-            <div className="flex items-center gap-3">
-              <Button variant="outline" asChild>
-                <Link href="/">Dashboard</Link>
-              </Button>
-              <Button variant="outline" asChild>
-                <Link href="/admin/games">Game library</Link>
-              </Button>
-              <UserButton size="icon" align="end" />
             </div>
           </header>
 
@@ -501,8 +524,9 @@ export default async function AdminPage({
 
               <CreateUserCard />
               <InvitationHistoryCard
-                invitations={invitations}
+                invitations={filteredInvitations}
                 usersById={invitationUserById}
+                filter={invitationFilter}
               />
             </div>
 
@@ -510,7 +534,15 @@ export default async function AdminPage({
               <CreateInvitationCard />
               {selectedUser ? (
                 <>
-                  <UserDetailCard user={selectedUser} />
+                  <UserDetailCard
+                    user={selectedUser}
+                    invitation={selectedUserInvitation}
+                    invitationCreator={
+                      selectedUserInvitation?.createdBy
+                        ? invitationUserById.get(selectedUserInvitation.createdBy)
+                        : undefined
+                    }
+                  />
                   <UserActionsCard user={selectedUser} />
                   <SessionsCard
                     sessions={selectedSessions ? selectedSessions.sessions : []}
@@ -599,9 +631,11 @@ function CreateInvitationCard() {
 function InvitationHistoryCard({
   invitations,
   usersById,
+  filter,
 }: {
   invitations: InvitationCode[];
   usersById: Map<string, InvitationUser>;
+  filter: InvitationStatus;
 }) {
   return (
     <Card>
@@ -611,9 +645,28 @@ function InvitationHistoryCard({
           Invitation history
         </CardTitle>
         <CardDescription>
-          Latest generated codes, who made them, and which account claimed each
+          Latest generated codes, who made them, and which account used each
           code.
         </CardDescription>
+        <CardAction>
+          <div className="flex flex-wrap gap-2">
+            {(["all", "open", "used", "revoked"] as const).map((status) => (
+              <Button
+                key={status}
+                size="sm"
+                variant={filter === status ? "default" : "outline"}
+                asChild
+              >
+                <Link
+                  href={status === "all" ? "/admin" : `/admin?invites=${status}`}
+                  scroll={false}
+                >
+                  {status[0].toUpperCase() + status.slice(1)}
+                </Link>
+              </Button>
+            ))}
+          </div>
+        </CardAction>
       </CardHeader>
       <CardContent className="space-y-3">
         {invitations.length ? (
@@ -650,13 +703,8 @@ function InvitationRow({
   creator?: InvitationUser;
   usedBy?: InvitationUser;
 }) {
-  const status = invitation.revokedAt
-    ? "Revoked"
-    : invitation.usedAt
-      ? "Used"
-      : invitation.claimedAt
-        ? "Claimed"
-        : "Open";
+  const status = invitationStatusOf(invitation);
+  const statusLabel = status[0].toUpperCase() + status.slice(1);
 
   return (
     <div className="rounded-lg border p-3">
@@ -667,17 +715,21 @@ function InvitationRow({
               {invitation.code}
             </code>
             <span className="rounded-md bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">
-              {status}
+              {statusLabel}
             </span>
           </div>
           <div className="grid gap-1 text-sm text-muted-foreground md:grid-cols-2">
             <span>Created {formatDate(invitation.createdAt)}</span>
-            <span>By {formatUser(creator)}</span>
-            <span>Claimed by {invitation.claimedEmail || "Nobody"}</span>
-            <span>Used by {formatUser(usedBy)}</span>
-            <span>Used {formatDate(invitation.usedAt)}</span>
+            <span>Generated by {formatUser(creator)}</span>
+            <span>Registered user {formatUser(usedBy)}</span>
+            <span>Registered {formatDate(invitation.usedAt)}</span>
             <span>Revoked {formatDate(invitation.revokedAt)}</span>
           </div>
+          {!invitation.usedAt && invitation.claimedEmail ? (
+            <p className="text-sm text-muted-foreground">
+              Registration attempted by {invitation.claimedEmail}
+            </p>
+          ) : null}
           {invitation.note ? (
             <p className="text-sm text-muted-foreground">{invitation.note}</p>
           ) : null}
@@ -736,7 +788,15 @@ function CreateUserCard() {
   );
 }
 
-function UserDetailCard({ user }: { user: AdminUser }) {
+function UserDetailCard({
+  user,
+  invitation,
+  invitationCreator,
+}: {
+  user: AdminUser;
+  invitation: InvitationCode | null;
+  invitationCreator?: InvitationUser;
+}) {
   return (
     <Card>
       <CardHeader>
@@ -751,6 +811,25 @@ function UserDetailCard({ user }: { user: AdminUser }) {
         <Detail label="Updated" value={formatDate(user.updatedAt)} />
         <Detail label="Ban reason" value={user.banReason || "None"} />
         <Detail label="Ban expires" value={formatDate(user.banExpires)} />
+        {invitation ? (
+          <>
+            <Detail label="Invitation code" value={invitation.code} />
+            <Detail
+              label="Invitation generated by"
+              value={formatUser(invitationCreator)}
+            />
+            <Detail
+              label="Invitation created"
+              value={formatDate(invitation.createdAt)}
+            />
+            <Detail
+              label="Invitation note"
+              value={invitation.note || "None"}
+            />
+          </>
+        ) : (
+          <Detail label="Invitation code" value="None recorded" />
+        )}
       </CardContent>
     </Card>
   );

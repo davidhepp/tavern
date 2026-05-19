@@ -178,14 +178,19 @@ export function SignUp({
     socialProviders.length > 0
 
   return (
-    <Card className={cn("w-full max-w-sm", className)}>
-      <CardHeader>
-        <CardTitle className="text-xl font-semibold">
-          {localization.auth.signUp}
-        </CardTitle>
-      </CardHeader>
+    <div className={cn("flex w-full max-w-sm flex-col gap-4", className)}>
+      <div className="font-mono text-center text-5xl font-semibold tracking-normal sm:text-6xl">
+        TAVERN
+      </div>
 
-      <CardContent>
+      <Card className="w-full">
+        <CardHeader>
+          <CardTitle className="text-xl font-semibold">
+            {localization.auth.signUp}
+          </CardTitle>
+        </CardHeader>
+
+        <CardContent>
         <div className="flex flex-col gap-6">
           {socialPosition === "top" && (
             <>
@@ -502,7 +507,8 @@ export function SignUp({
             </FieldDescription>
           </div>
         )}
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
+    </div>
   )
 }

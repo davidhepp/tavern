@@ -85,14 +85,6 @@ export function GameLibraryDashboard({
           </div>
 
           <div className="flex items-center gap-2">
-            {isAdmin ? (
-              <Button variant="outline" asChild>
-                <Link href="/admin/games">
-                  <ShieldCheck />
-                  Manage library
-                </Link>
-              </Button>
-            ) : null}
             <UserButton size="icon" align="end" />
           </div>
         </header>

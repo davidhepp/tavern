@@ -1,7 +1,6 @@
 import { authQueryKeys } from "@better-auth-ui/core";
 import { dehydrate, HydrationBoundary } from "@tanstack/react-query";
 import {
-  ArrowLeft,
   FileArchive,
   Gamepad2,
   LinkIcon,
@@ -14,7 +13,7 @@ import Link from "next/link";
 import { forbidden, redirect } from "next/navigation";
 import type { ReactNode } from "react";
 
-import { UserButton } from "@/components/auth/user/user-button";
+import { AdminNav } from "@/app/admin/admin-nav";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -86,20 +85,15 @@ export default async function AdminGamesPage({
       <GameActionToaster success={success} error={error} />
       <main className="min-h-dvh bg-background">
         <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-4 md:px-6 md:py-6">
-          <header className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <AdminNav />
+
+          <header>
             <div>
-              <Button variant="outline" size="sm" asChild className="mb-3">
-                <Link href="/">
-                  <ArrowLeft />
-                  Dashboard
-                </Link>
-              </Button>
               <p className="text-sm text-muted-foreground">Admin library</p>
               <h1 className="text-2xl font-semibold tracking-normal">
                 Manage games and resources
               </h1>
             </div>
-            <UserButton size="icon" align="end" />
           </header>
 
           <section className="grid gap-4 xl:grid-cols-[380px_1fr]">
