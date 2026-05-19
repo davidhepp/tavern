@@ -29,9 +29,7 @@ export default async function SettingsPage({
   queryClient.setQueryData(authQueryKeys.session, session);
 
   if (!session) {
-    redirect(
-      `/auth/sign-in?redirectTo=${encodeURIComponent(`/settings/${path}`)}`,
-    );
+    redirect("/auth/sign-in");
   }
 
   return (

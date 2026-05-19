@@ -1,20 +1,32 @@
 import { NextRequest, NextResponse } from "next/server";
-import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
 
 export async function proxy(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+
   const session = await auth.api.getSession({
-    headers: await headers(),
+    headers: request.headers,
   });
 
+  if (pathname.startsWith("/auth")) {
+    if (session && !pathname.startsWith("/auth/sign-out")) {
+      return NextResponse.redirect(new URL("/", request.url));
+    }
+
+    return NextResponse.next();
+  }
+
   if (!session) {
-    return NextResponse.redirect(new URL("/auth/sign-in", request.url));
+    const signInUrl = new URL("/auth/sign-in", request.url);
+
+    return NextResponse.redirect(signInUrl);
   }
 
   return NextResponse.next();
 }
 
 export const config = {
-  //match all except login and sign up
-  matcher: ["/dashboard"],
+  matcher: [
+    "/((?!api/auth|_next/static|_next/image|favicon.ico|.*\\..*).*)",
+  ],
 };

@@ -12,6 +12,10 @@ export default async function AuthPage({
 }) {
   const { path } = await params;
 
+  if (path === viewPaths.auth.signUp) {
+    notFound();
+  }
+
   if (!Object.values(viewPaths.auth).includes(path)) {
     notFound();
   }

@@ -16,7 +16,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
   Field,
-  FieldDescription,
   FieldError,
   FieldGroup,
   FieldSeparator
@@ -296,17 +295,6 @@ export function SignIn({
             </Link>
           )}
 
-          {emailAndPassword?.enabled && (
-            <FieldDescription className="text-center">
-              {localization.auth.needToCreateAnAccount}{" "}
-              <Link
-                href={`${basePaths.auth}/${viewPaths.auth.signUp}`}
-                className="underline underline-offset-4"
-              >
-                {localization.auth.signUp}
-              </Link>
-            </FieldDescription>
-          )}
         </div>
       </CardContent>
     </Card>

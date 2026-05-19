@@ -10,8 +10,7 @@ import {
   ChevronsUpDown,
   LogIn,
   LogOut,
-  Settings,
-  UserPlus2
+  Settings
 } from "lucide-react"
 import {
   type ComponentType,
@@ -224,14 +223,6 @@ export function UserButton({
                 <LogIn className="text-muted-foreground" />
 
                 {localization.auth.signIn}
-              </Link>
-            </DropdownMenuItem>
-
-            <DropdownMenuItem asChild>
-              <Link href={`${basePaths.auth}/${viewPaths.auth.signUp}`}>
-                <UserPlus2 className="text-muted-foreground" />
-
-                {localization.auth.signUp}
               </Link>
             </DropdownMenuItem>
 
