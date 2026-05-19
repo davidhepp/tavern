@@ -23,6 +23,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { ConfirmSubmitButton } from "@/components/ui/confirm-submit-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
@@ -35,6 +36,7 @@ import {
   updateGameAction,
   updateResourceAction,
 } from "@/app/admin/games/actions";
+import { GameActionToaster } from "@/app/admin/games/action-toaster";
 import {
   PlatformMultiSelect,
   ResourceTypeSelect,
@@ -74,11 +76,14 @@ export default async function AdminGamesPage({
 
   const library = await getGameLibrary({ includeArchived: true });
   const selectedGameId = firstParam(params.gameId);
+  const success = firstParam(params.success);
+  const error = firstParam(params.error);
   const selectedGame =
     library.find((game) => game.id === selectedGameId) ?? library[0];
 
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>
+      <GameActionToaster success={success} error={error} />
       <main className="min-h-dvh bg-background">
         <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-4 md:px-6 md:py-6">
           <header className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
@@ -262,14 +267,16 @@ function GameForm({
           <Pencil />
           Save game
         </Button>
-        <Button
+        <ConfirmSubmitButton
           formAction={deleteGameAction}
-          type="submit"
           variant="destructive"
+          confirmTitle="Delete this game?"
+          confirmDescription={`This removes ${game.title} and all of its resources.`}
+          confirmLabel="Delete"
         >
           <Trash2 />
           Delete game
-        </Button>
+        </ConfirmSubmitButton>
       </div>
     </form>
   );
@@ -325,6 +332,7 @@ function ResourceForm({
   return (
     <form action={updateResourceAction} className="rounded-lg border p-3">
       <input type="hidden" name="resourceId" value={resource.id} />
+      <input type="hidden" name="gameId" value={resource.gameId} />
       <div className="mb-3 flex items-center gap-2 text-sm font-medium">
         <Icon className="size-4" />
         {resource.title}
@@ -360,15 +368,17 @@ function ResourceForm({
           <Pencil />
           Save resource
         </Button>
-        <Button
+        <ConfirmSubmitButton
           formAction={deleteResourceAction}
-          type="submit"
           variant="destructive"
           size="sm"
+          confirmTitle="Delete this resource?"
+          confirmDescription={`This removes ${resource.title} from the game library.`}
+          confirmLabel="Delete"
         >
           <Trash2 />
           Delete
-        </Button>
+        </ConfirmSubmitButton>
       </div>
     </form>
   );

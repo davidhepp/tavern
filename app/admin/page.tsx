@@ -29,6 +29,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { ConfirmSubmitButton } from "@/components/ui/confirm-submit-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
@@ -275,6 +276,7 @@ async function removeUserAction(formData: FormData) {
   });
 
   revalidatePath("/admin");
+  redirect("/admin");
 }
 
 function firstParam(value: string | string[] | undefined) {
@@ -344,19 +346,23 @@ export default async function AdminPage({
     headers: requestHeaderList,
   });
 
-  const selectedUser =
-    selectedUserId &&
-    (await auth.api.getUser({
-      query: { id: selectedUserId },
-      headers: requestHeaderList,
-    }));
+  const selectedUser = selectedUserId
+    ? await auth.api
+        .getUser({
+          query: { id: selectedUserId },
+          headers: requestHeaderList,
+        })
+        .catch(() => null)
+    : null;
 
-  const selectedSessions =
-    selectedUserId &&
-    (await auth.api.listUserSessions({
-      body: { userId: selectedUserId },
-      headers: requestHeaderList,
-    }));
+  const selectedSessions = selectedUser
+    ? await auth.api
+        .listUserSessions({
+          body: { userId: selectedUser.id },
+          headers: requestHeaderList,
+        })
+        .catch(() => ({ sessions: [] }))
+    : null;
 
   const invitations = await db
     .select()
@@ -417,10 +423,15 @@ export default async function AdminPage({
                   </p>
                 </div>
                 <form action={stopImpersonatingAction}>
-                  <Button type="submit" variant="outline">
+                  <ConfirmSubmitButton
+                    variant="outline"
+                    confirmTitle="Stop impersonating?"
+                    confirmDescription="You will return to your own admin session."
+                    confirmLabel="Stop"
+                  >
                     <XCircle />
                     Stop impersonating
-                  </Button>
+                  </ConfirmSubmitButton>
                 </form>
               </CardContent>
             </Card>
@@ -674,9 +685,15 @@ function InvitationRow({
         {!invitation.usedAt && !invitation.revokedAt ? (
           <form action={revokeInvitationAction}>
             <input type="hidden" name="invitationId" value={invitation.id} />
-            <Button type="submit" size="sm" variant="outline">
+            <ConfirmSubmitButton
+              size="sm"
+              variant="outline"
+              confirmTitle="Revoke invitation code?"
+              confirmDescription={`Code ${invitation.code} will no longer be accepted for registration.`}
+              confirmLabel="Revoke"
+            >
               Revoke
-            </Button>
+            </ConfirmSubmitButton>
           </form>
         ) : null}
       </div>
@@ -768,19 +785,29 @@ function UserActionsCard({ user }: { user: AdminUser }) {
         <form action={setRoleAction} className="flex gap-2">
           <input type="hidden" name="userId" value={user.id} />
           <Input name="role" defaultValue={user.role || "user"} />
-          <Button type="submit" variant="outline">
+          <ConfirmSubmitButton
+            variant="outline"
+            confirmTitle="Change this user's role?"
+            confirmDescription={`This changes access permissions for ${user.email}.`}
+            confirmLabel="Set role"
+          >
             <ShieldCheck />
             Set role
-          </Button>
+          </ConfirmSubmitButton>
         </form>
 
         <form action={setPasswordAction} className="flex gap-2">
           <input type="hidden" name="userId" value={user.id} />
           <Input name="newPassword" type="password" placeholder="New password" required />
-          <Button type="submit" variant="outline">
+          <ConfirmSubmitButton
+            variant="outline"
+            confirmTitle="Set a new password?"
+            confirmDescription={`This immediately changes the password for ${user.email}.`}
+            confirmLabel="Set password"
+          >
             <KeyRound />
             Set
-          </Button>
+          </ConfirmSubmitButton>
         </form>
 
         <Separator />
@@ -788,10 +815,15 @@ function UserActionsCard({ user }: { user: AdminUser }) {
         {user.banned ? (
           <form action={unbanUserAction}>
             <input type="hidden" name="userId" value={user.id} />
-            <Button type="submit" variant="outline">
+            <ConfirmSubmitButton
+              variant="outline"
+              confirmTitle="Unban this user?"
+              confirmDescription={`${user.email} will regain account access.`}
+              confirmLabel="Unban"
+            >
               <XCircle />
               Unban user
-            </Button>
+            </ConfirmSubmitButton>
           </form>
         ) : (
           <form action={banUserAction} className="grid gap-2">
@@ -803,10 +835,15 @@ function UserActionsCard({ user }: { user: AdminUser }) {
               min="0"
               placeholder="Expires in seconds, blank for never"
             />
-            <Button type="submit" variant="destructive">
+            <ConfirmSubmitButton
+              variant="destructive"
+              confirmTitle="Ban this user?"
+              confirmDescription={`${user.email} will lose account access until the ban is removed or expires.`}
+              confirmLabel="Ban"
+            >
               <Ban />
               Ban user
-            </Button>
+            </ConfirmSubmitButton>
           </form>
         )}
 
@@ -815,17 +852,29 @@ function UserActionsCard({ user }: { user: AdminUser }) {
         <div className="grid gap-2 sm:grid-cols-2">
           <form action={impersonateUserAction}>
             <input type="hidden" name="userId" value={user.id} />
-            <Button type="submit" variant="outline" className="w-full">
+            <ConfirmSubmitButton
+              variant="outline"
+              className="w-full"
+              confirmTitle="Impersonate this user?"
+              confirmDescription={`You will leave admin as yourself and browse as ${user.email}.`}
+              confirmLabel="Impersonate"
+            >
               <LogIn />
               Impersonate
-            </Button>
+            </ConfirmSubmitButton>
           </form>
           <form action={removeUserAction}>
             <input type="hidden" name="userId" value={user.id} />
-            <Button type="submit" variant="destructive" className="w-full">
+            <ConfirmSubmitButton
+              variant="destructive"
+              className="w-full"
+              confirmTitle="Remove this user?"
+              confirmDescription={`${user.email} will be deleted and you will return to the account list.`}
+              confirmLabel="Remove"
+            >
               <Trash2 />
               Remove
-            </Button>
+            </ConfirmSubmitButton>
           </form>
         </div>
       </CardContent>
@@ -862,9 +911,15 @@ function SessionsCard({
                 </div>
                 <form action={revokeSessionAction}>
                   <input type="hidden" name="sessionToken" value={session.token} />
-                  <Button type="submit" size="sm" variant="outline">
+                  <ConfirmSubmitButton
+                    size="sm"
+                    variant="outline"
+                    confirmTitle="Revoke this session?"
+                    confirmDescription="That device will need to sign in again."
+                    confirmLabel="Revoke"
+                  >
                     Revoke
-                  </Button>
+                  </ConfirmSubmitButton>
                 </form>
               </div>
             </div>
@@ -874,9 +929,15 @@ function SessionsCard({
         )}
         <form action={revokeSessionsAction}>
           <input type="hidden" name="userId" value={userId} />
-          <Button type="submit" variant="outline" className="w-full">
+          <ConfirmSubmitButton
+            variant="outline"
+            className="w-full"
+            confirmTitle="Revoke all sessions?"
+            confirmDescription="Every active session for this user will be signed out."
+            confirmLabel="Revoke all"
+          >
             Revoke all sessions
-          </Button>
+          </ConfirmSubmitButton>
         </form>
       </CardContent>
     </Card>

@@ -29,6 +29,25 @@ function resourceTypeFrom(formData: FormData) {
     : "link";
 }
 
+function adminGamesUrl({
+  gameId,
+  success,
+  error,
+}: {
+  gameId?: string;
+  success?: string;
+  error?: string;
+}) {
+  const params = new URLSearchParams();
+
+  if (gameId) params.set("gameId", gameId);
+  if (success) params.set("success", success);
+  if (error) params.set("error", error);
+
+  const query = params.toString();
+  return query ? `/admin/games?${query}` : "/admin/games";
+}
+
 async function requireAdmin() {
   const requestHeaders = await headers();
   const session = await auth.api.getSession({ headers: requestHeaders });
@@ -51,21 +70,27 @@ export async function createGameAction(formData: FormData) {
   const session = await requireAdmin();
   const title = valueFrom(formData, "title");
   const slug = slugify(title);
+  const id = crypto.randomUUID();
 
-  await db.insert(game).values({
-    id: crypto.randomUUID(),
-    title,
-    slug,
-    summary: valueFrom(formData, "summary") || null,
-    coverUrl: valueFrom(formData, "coverUrl") || null,
-    platform: valueFrom(formData, "platform") || null,
-    status: valueFrom(formData, "status") || "active",
-    createdBy: session.user.id,
-    updatedBy: session.user.id,
-  });
+  try {
+    await db.insert(game).values({
+      id,
+      title,
+      slug,
+      summary: valueFrom(formData, "summary") || null,
+      coverUrl: valueFrom(formData, "coverUrl") || null,
+      platform: valueFrom(formData, "platform") || null,
+      status: valueFrom(formData, "status") || "active",
+      createdBy: session.user.id,
+      updatedBy: session.user.id,
+    });
+  } catch {
+    redirect(adminGamesUrl({ error: "game-create-failed" }));
+  }
 
   revalidatePath("/");
   revalidatePath("/admin/games");
+  redirect(adminGamesUrl({ gameId: id, success: "game-created" }));
 }
 
 export async function updateGameAction(formData: FormData) {
@@ -74,79 +99,108 @@ export async function updateGameAction(formData: FormData) {
   const title = valueFrom(formData, "title");
   const slug = slugify(title);
 
-  await db
-    .update(game)
-    .set({
-      title,
-      slug,
-      summary: valueFrom(formData, "summary") || null,
-      coverUrl: valueFrom(formData, "coverUrl") || null,
-      platform: valueFrom(formData, "platform") || null,
-      status: valueFrom(formData, "status") || "active",
-      updatedBy: session.user.id,
-      updatedAt: new Date(),
-    })
-    .where(eq(game.id, id));
+  try {
+    await db
+      .update(game)
+      .set({
+        title,
+        slug,
+        summary: valueFrom(formData, "summary") || null,
+        coverUrl: valueFrom(formData, "coverUrl") || null,
+        platform: valueFrom(formData, "platform") || null,
+        status: valueFrom(formData, "status") || "active",
+        updatedBy: session.user.id,
+        updatedAt: new Date(),
+      })
+      .where(eq(game.id, id));
+  } catch {
+    redirect(adminGamesUrl({ gameId: id, error: "game-update-failed" }));
+  }
 
   revalidatePath("/");
   revalidatePath("/admin/games");
+  redirect(adminGamesUrl({ gameId: id, success: "game-updated" }));
 }
 
 export async function deleteGameAction(formData: FormData) {
   await requireAdmin();
+  const id = valueFrom(formData, "gameId");
 
-  await db.delete(game).where(eq(game.id, valueFrom(formData, "gameId")));
+  try {
+    await db.delete(game).where(eq(game.id, id));
+  } catch {
+    redirect(adminGamesUrl({ gameId: id, error: "game-delete-failed" }));
+  }
 
   revalidatePath("/");
   revalidatePath("/admin/games");
+  redirect(adminGamesUrl({ success: "game-deleted" }));
 }
 
 export async function createResourceAction(formData: FormData) {
   const session = await requireAdmin();
+  const gameId = valueFrom(formData, "gameId");
 
-  await db.insert(gameResource).values({
-    id: crypto.randomUUID(),
-    gameId: valueFrom(formData, "gameId"),
-    title: valueFrom(formData, "title"),
-    url: valueFrom(formData, "url"),
-    resourceType: resourceTypeFrom(formData),
-    description: valueFrom(formData, "description") || null,
-    sortOrder: Number(valueFrom(formData, "sortOrder")) || 0,
-    createdBy: session.user.id,
-    updatedBy: session.user.id,
-  });
-
-  revalidatePath("/");
-  revalidatePath("/admin/games");
-}
-
-export async function updateResourceAction(formData: FormData) {
-  const session = await requireAdmin();
-
-  await db
-    .update(gameResource)
-    .set({
+  try {
+    await db.insert(gameResource).values({
+      id: crypto.randomUUID(),
+      gameId,
       title: valueFrom(formData, "title"),
       url: valueFrom(formData, "url"),
       resourceType: resourceTypeFrom(formData),
       description: valueFrom(formData, "description") || null,
       sortOrder: Number(valueFrom(formData, "sortOrder")) || 0,
+      createdBy: session.user.id,
       updatedBy: session.user.id,
-      updatedAt: new Date(),
-    })
-    .where(eq(gameResource.id, valueFrom(formData, "resourceId")));
+    });
+  } catch {
+    redirect(adminGamesUrl({ gameId, error: "resource-create-failed" }));
+  }
 
   revalidatePath("/");
   revalidatePath("/admin/games");
+  redirect(adminGamesUrl({ gameId, success: "resource-created" }));
+}
+
+export async function updateResourceAction(formData: FormData) {
+  const session = await requireAdmin();
+  const gameId = valueFrom(formData, "gameId");
+
+  try {
+    await db
+      .update(gameResource)
+      .set({
+        title: valueFrom(formData, "title"),
+        url: valueFrom(formData, "url"),
+        resourceType: resourceTypeFrom(formData),
+        description: valueFrom(formData, "description") || null,
+        sortOrder: Number(valueFrom(formData, "sortOrder")) || 0,
+        updatedBy: session.user.id,
+        updatedAt: new Date(),
+      })
+      .where(eq(gameResource.id, valueFrom(formData, "resourceId")));
+  } catch {
+    redirect(adminGamesUrl({ gameId, error: "resource-update-failed" }));
+  }
+
+  revalidatePath("/");
+  revalidatePath("/admin/games");
+  redirect(adminGamesUrl({ gameId, success: "resource-updated" }));
 }
 
 export async function deleteResourceAction(formData: FormData) {
   await requireAdmin();
+  const gameId = valueFrom(formData, "gameId");
 
-  await db
-    .delete(gameResource)
-    .where(eq(gameResource.id, valueFrom(formData, "resourceId")));
+  try {
+    await db
+      .delete(gameResource)
+      .where(eq(gameResource.id, valueFrom(formData, "resourceId")));
+  } catch {
+    redirect(adminGamesUrl({ gameId, error: "resource-delete-failed" }));
+  }
 
   revalidatePath("/");
   revalidatePath("/admin/games");
+  redirect(adminGamesUrl({ gameId, success: "resource-deleted" }));
 }

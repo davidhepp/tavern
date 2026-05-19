@@ -14,6 +14,7 @@ import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
+import { ConfirmActionButton } from "@/components/ui/confirm-action-button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Spinner } from "@/components/ui/spinner"
 import { cn } from "@/lib/utils"
@@ -93,12 +94,15 @@ export function LinkedAccount({ account, provider }: LinkedAccountProps) {
         </div>
 
         {account ? (
-          <Button
+          <ConfirmActionButton
             className="ml-auto shrink-0"
             variant="outline"
             size="sm"
-            onClick={() => unlinkAccount({ providerId: account.providerId })}
             disabled={isUnlinking}
+            confirmTitle={`Unlink ${providerName}?`}
+            confirmDescription="This sign-in method will be removed from your account."
+            confirmLabel="Unlink"
+            onConfirm={() => unlinkAccount({ providerId: account.providerId })}
             aria-label={localization.settings.unlinkProvider.replace(
               "{{provider}}",
               providerName
@@ -108,7 +112,7 @@ export function LinkedAccount({ account, provider }: LinkedAccountProps) {
             {localization.settings.unlinkProvider
               .replace("{{provider}}", "")
               .trim()}
-          </Button>
+          </ConfirmActionButton>
         ) : (
           <Button
             className="ml-auto shrink-0"

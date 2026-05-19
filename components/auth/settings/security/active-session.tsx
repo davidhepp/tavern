@@ -6,8 +6,8 @@ import Bowser from "bowser"
 import { LogOut, Monitor, Smartphone, X } from "lucide-react"
 import { toast } from "sonner"
 
-import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
+import { ConfirmActionButton } from "@/components/ui/confirm-action-button"
 import { Spinner } from "@/components/ui/spinner"
 
 function timeAgo(date: Date) {
@@ -92,18 +92,33 @@ export function ActiveSession({ activeSession }: ActiveSessionProps) {
           )}
         </div>
 
-        <Button
+        <ConfirmActionButton
           className="ml-auto shrink-0"
           variant="outline"
           size="sm"
-          onClick={() =>
+          disabled={isRevoking}
+          confirmTitle={
+            isCurrentSession
+              ? "Sign out of this session?"
+              : "Revoke this session?"
+          }
+          confirmDescription={
+            isCurrentSession
+              ? "You will return to the sign-in page."
+              : "That device will need to sign in again."
+          }
+          confirmLabel={
+            isCurrentSession
+              ? localization.auth.signOut
+              : localization.settings.revoke
+          }
+          onConfirm={() =>
             isCurrentSession
               ? navigate({
                   to: `${basePaths.auth}/${viewPaths.auth.signOut}`
                 })
               : revokeSession(activeSession)
           }
-          disabled={isRevoking}
           aria-label={
             isCurrentSession
               ? localization.auth.signOut
@@ -115,7 +130,7 @@ export function ActiveSession({ activeSession }: ActiveSessionProps) {
           {isCurrentSession
             ? localization.auth.signOut
             : localization.settings.revoke}
-        </Button>
+        </ConfirmActionButton>
       </CardContent>
     </Card>
   )
