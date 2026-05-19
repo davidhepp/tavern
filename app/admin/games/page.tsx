@@ -35,11 +35,27 @@ import {
   updateGameAction,
   updateResourceAction,
 } from "@/app/admin/games/actions";
+import {
+  PlatformMultiSelect,
+  ResourceTypeSelect,
+  TitleInput,
+} from "@/app/admin/games/form-controls";
 import { auth } from "@/lib/auth";
 import { getGameLibrary } from "@/lib/game-library";
 import { getQueryClient } from "@/lib/query-client";
 
-export default async function AdminGamesPage() {
+type SearchParams = Promise<Record<string, string | string[] | undefined>>;
+
+function firstParam(value: string | string[] | undefined) {
+  return Array.isArray(value) ? value[0] : value;
+}
+
+export default async function AdminGamesPage({
+  searchParams,
+}: {
+  searchParams: SearchParams;
+}) {
+  const params = await searchParams;
   const requestHeaders = await headers();
   const queryClient = getQueryClient();
   const session = await auth.api.getSession({ headers: requestHeaders });
@@ -57,6 +73,9 @@ export default async function AdminGamesPage() {
   }
 
   const library = await getGameLibrary({ includeArchived: true });
+  const selectedGameId = firstParam(params.gameId);
+  const selectedGame =
+    library.find((game) => game.id === selectedGameId) ?? library[0];
 
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>
@@ -78,46 +97,82 @@ export default async function AdminGamesPage() {
             <UserButton size="icon" align="end" />
           </header>
 
-          <section className="grid gap-4 xl:grid-cols-[420px_1fr]">
+          <section className="grid gap-4 xl:grid-cols-[380px_1fr]">
             <div className="flex flex-col gap-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Games</CardTitle>
+                  <CardDescription>
+                    Select a game to edit its details and resources.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  {library.length ? (
+                    library.map((game) => (
+                      <Button
+                        key={game.id}
+                        variant={selectedGame?.id === game.id ? "default" : "outline"}
+                        className="h-auto w-full justify-start px-3 py-2"
+                        asChild
+                      >
+                        <Link href={`/admin/games?gameId=${game.id}`}>
+                          <div className="min-w-0 text-left">
+                            <p className="truncate text-sm font-medium">
+                              {game.title}
+                            </p>
+                            <p className="truncate text-xs opacity-75">
+                              {game.platform || "Any platform"} · {game.resources.length} resources
+                            </p>
+                          </div>
+                        </Link>
+                      </Button>
+                    ))
+                  ) : (
+                    <p className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
+                      No games yet.
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
               <CreateGameCard />
             </div>
 
             <div className="grid gap-4">
-              {library.length ? (
-                library.map((game) => (
-                  <Card key={game.id}>
-                    <CardHeader>
-                      <CardTitle>{game.title}</CardTitle>
-                      <CardDescription>{game.summary}</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-5">
-                      <GameForm game={game} />
+              {selectedGame ? (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>{selectedGame.title}</CardTitle>
+                    {selectedGame.summary ? (
+                      <CardDescription>{selectedGame.summary}</CardDescription>
+                    ) : (
+                      <CardDescription>
+                        Edit this game collection and its shared resources.
+                      </CardDescription>
+                    )}
+                  </CardHeader>
+                  <CardContent className="space-y-5">
+                    <GameForm game={selectedGame} />
 
-                      <Separator />
+                    <Separator />
 
-                      <div className="grid gap-3">
-                        <div className="flex items-center gap-2 text-sm font-medium">
-                          <Gamepad2 className="size-4" />
-                          Resources
-                        </div>
-                        <CreateResourceForm gameId={game.id} />
-                        {game.resources.length ? (
-                          game.resources.map((resource) => (
-                            <ResourceForm
-                              key={resource.id}
-                              resource={resource}
-                            />
-                          ))
-                        ) : (
-                          <p className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
-                            No resources yet. Add one with the form on the left.
-                          </p>
-                        )}
+                    <div className="grid gap-3">
+                      <div className="flex items-center gap-2 text-sm font-medium">
+                        <Gamepad2 className="size-4" />
+                        Resources
                       </div>
-                    </CardContent>
-                  </Card>
-                ))
+                      <CreateResourceForm gameId={selectedGame.id} />
+                      {selectedGame.resources.length ? (
+                        selectedGame.resources.map((resource) => (
+                          <ResourceForm key={resource.id} resource={resource} />
+                        ))
+                      ) : (
+                        <p className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
+                          No resources yet. Add one above.
+                        </p>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
               ) : (
                 <Card>
                   <CardContent className="flex min-h-64 flex-col items-center justify-center gap-3 text-center">
@@ -153,19 +208,16 @@ function CreateGameCard() {
       <CardContent>
         <form action={createGameAction} className="grid gap-3">
           <Field label="Title">
-            <Input name="title" required placeholder="Baldur's Gate 3" />
-          </Field>
-          <Field label="Slug">
-            <Input name="slug" placeholder="baldurs-gate-3" />
+            <TitleInput placeholder="Baldur's Gate 3" />
           </Field>
           <Field label="Summary">
-            <Textarea name="summary" required placeholder="Shared saves, mod lists, and table notes." />
+            <Textarea name="summary" placeholder="Optional context for this collection." />
           </Field>
           <Field label="Cover URL">
             <Input name="coverUrl" type="url" placeholder="https://..." />
           </Field>
           <Field label="Platform">
-            <Input name="platform" placeholder="PC, Steam Deck, Switch" />
+            <PlatformMultiSelect />
           </Field>
           <Field label="Status">
             <Input name="status" defaultValue="active" />
@@ -189,20 +241,17 @@ function GameForm({
     <form action={updateGameAction} className="grid gap-3 md:grid-cols-2">
       <input type="hidden" name="gameId" value={game.id} />
       <Field label="Title">
-        <Input name="title" defaultValue={game.title} required />
-      </Field>
-      <Field label="Slug">
-        <Input name="slug" defaultValue={game.slug} required />
+        <TitleInput defaultValue={game.title} />
       </Field>
       <Field label="Summary">
-        <Textarea name="summary" defaultValue={game.summary} required />
+        <Textarea name="summary" defaultValue={game.summary ?? ""} />
       </Field>
       <div className="grid gap-3">
         <Field label="Cover URL">
           <Input name="coverUrl" type="url" defaultValue={game.coverUrl ?? ""} />
         </Field>
         <Field label="Platform">
-          <Input name="platform" defaultValue={game.platform ?? ""} />
+          <PlatformMultiSelect defaultValue={game.platform} />
         </Field>
         <Field label="Status">
           <Input name="status" defaultValue={game.status} />
@@ -242,7 +291,7 @@ function CreateResourceForm({ gameId }: { gameId: string }) {
           <Input name="url" type="url" required placeholder="https://..." />
         </Field>
         <Field label="Type">
-          <Input name="resourceType" defaultValue="link" />
+          <ResourceTypeSelect />
         </Field>
         <Field label="Sort order">
           <Input name="sortOrder" type="number" defaultValue="0" />
@@ -288,7 +337,7 @@ function ResourceForm({
           <Input name="url" type="url" defaultValue={resource.url} required />
         </Field>
         <Field label="Type">
-          <Input name="resourceType" defaultValue={resource.resourceType} />
+          <ResourceTypeSelect defaultValue={resource.resourceType} />
         </Field>
         <Field label="Sort order">
           <Input

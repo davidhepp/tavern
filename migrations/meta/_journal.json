@@ -22,6 +22,13 @@
       "when": 1779203538419,
       "tag": "0002_jittery_famine",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1779204142583,
+      "tag": "0003_melted_stardust",
+      "breakpoints": true
     }
   ]
 }

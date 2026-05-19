@@ -50,14 +50,13 @@ async function requireAdmin() {
 export async function createGameAction(formData: FormData) {
   const session = await requireAdmin();
   const title = valueFrom(formData, "title");
-  const explicitSlug = valueFrom(formData, "slug");
-  const slug = slugify(explicitSlug || title);
+  const slug = slugify(title);
 
   await db.insert(game).values({
     id: crypto.randomUUID(),
     title,
     slug,
-    summary: valueFrom(formData, "summary"),
+    summary: valueFrom(formData, "summary") || null,
     coverUrl: valueFrom(formData, "coverUrl") || null,
     platform: valueFrom(formData, "platform") || null,
     status: valueFrom(formData, "status") || "active",
@@ -73,15 +72,14 @@ export async function updateGameAction(formData: FormData) {
   const session = await requireAdmin();
   const id = valueFrom(formData, "gameId");
   const title = valueFrom(formData, "title");
-  const explicitSlug = valueFrom(formData, "slug");
-  const slug = slugify(explicitSlug || title);
+  const slug = slugify(title);
 
   await db
     .update(game)
     .set({
       title,
       slug,
-      summary: valueFrom(formData, "summary"),
+      summary: valueFrom(formData, "summary") || null,
       coverUrl: valueFrom(formData, "coverUrl") || null,
       platform: valueFrom(formData, "platform") || null,
       status: valueFrom(formData, "status") || "active",

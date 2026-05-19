@@ -86,13 +86,42 @@ export const verification = pgTable(
   (table) => [index("verification_identifier_idx").on(table.identifier)],
 );
 
+export const invitationCode = pgTable(
+  "invitation_code",
+  {
+    id: text("id").primaryKey(),
+    code: text("code").notNull(),
+    note: text("note"),
+    createdBy: text("created_by").references(() => user.id, {
+      onDelete: "set null",
+    }),
+    claimedEmail: text("claimed_email"),
+    claimedAt: timestamp("claimed_at"),
+    usedBy: text("used_by").references(() => user.id, {
+      onDelete: "set null",
+    }),
+    usedAt: timestamp("used_at"),
+    revokedAt: timestamp("revoked_at"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .$onUpdate(() => /* @__PURE__ */ new Date())
+      .notNull(),
+  },
+  (table) => [
+    uniqueIndex("invitation_code_code_idx").on(table.code),
+    index("invitation_code_created_by_idx").on(table.createdBy),
+    index("invitation_code_used_by_idx").on(table.usedBy),
+  ],
+);
+
 export const game = pgTable(
   "game",
   {
     id: text("id").primaryKey(),
     slug: text("slug").notNull(),
     title: text("title").notNull(),
-    summary: text("summary").notNull(),
+    summary: text("summary"),
     coverUrl: text("cover_url"),
     platform: text("platform"),
     status: text("status").default("active").notNull(),
@@ -147,6 +176,12 @@ export const gameResource = pgTable(
 export const userRelations = relations(user, ({ many }) => ({
   sessions: many(session),
   accounts: many(account),
+  createdInvitationCodes: many(invitationCode, {
+    relationName: "createdInvitationCodes",
+  }),
+  usedInvitationCodes: many(invitationCode, {
+    relationName: "usedInvitationCodes",
+  }),
   createdGames: many(game, { relationName: "createdGames" }),
   updatedGames: many(game, { relationName: "updatedGames" }),
   createdGameResources: many(gameResource, {
@@ -168,6 +203,19 @@ export const accountRelations = relations(account, ({ one }) => ({
   user: one(user, {
     fields: [account.userId],
     references: [user.id],
+  }),
+}));
+
+export const invitationCodeRelations = relations(invitationCode, ({ one }) => ({
+  creator: one(user, {
+    fields: [invitationCode.createdBy],
+    references: [user.id],
+    relationName: "createdInvitationCodes",
+  }),
+  usedByUser: one(user, {
+    fields: [invitationCode.usedBy],
+    references: [user.id],
+    relationName: "usedInvitationCodes",
   }),
 }));
 
