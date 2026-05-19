@@ -147,8 +147,8 @@ export default async function Home() {
                   </p>
                 </div>
                 <Button variant="outline" className="w-full" asChild>
-                  <Link href="/settings/security">
-                    Account security
+                  <Link href="/admin">
+                    Admin console
                     <ArrowUpRight className="size-4" />
                   </Link>
                 </Button>

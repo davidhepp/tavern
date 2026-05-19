@@ -1,16 +1,15 @@
 "use client"
 
 import {
-  type MultiSessionAuthClient,
   useAuth,
-  useSession,
-  useSetActiveSession
+  useSession
 } from "@better-auth-ui/react"
 import {
   ChevronsUpDown,
   LogIn,
   LogOut,
-  Settings
+  Settings,
+  ShieldCheck
 } from "lucide-react"
 import {
   type ComponentType,
@@ -118,10 +117,11 @@ export function UserButton({
   const { authClient, basePaths, viewPaths, localization, plugins, Link } =
     useAuth()
 
-  const { isPending: settingActiveSession } = useSetActiveSession(
-    authClient as MultiSessionAuthClient
-  )
   const { data: session, isPending: sessionPending } = useSession(authClient)
+  const userRole =
+    session && "role" in session.user
+      ? (session.user.role as string | undefined)
+      : undefined
 
   const userLinks = links?.flatMap((link, index) => {
     if (!isValidElement(link)) {
@@ -149,8 +149,8 @@ export function UserButton({
             className={cn("py-2.5 h-auto font-normal", className)}
             size="lg"
           >
-            {session || sessionPending || settingActiveSession ? (
-              <UserView isPending={!!settingActiveSession} />
+            {session || sessionPending ? (
+              <UserView />
             ) : (
               <>
                 <UserAvatar />
@@ -194,6 +194,16 @@ export function UserButton({
                   <Settings className="text-muted-foreground" />
 
                   {localization.settings.settings}
+                </Link>
+              </DropdownMenuItem>
+            )}
+
+            {userRole?.split(",").includes("admin") && (
+              <DropdownMenuItem asChild>
+                <Link href="/admin">
+                  <ShieldCheck className="text-muted-foreground" />
+
+                  Admin
                 </Link>
               </DropdownMenuItem>
             )}
