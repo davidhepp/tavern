@@ -51,6 +51,33 @@ class UploadPartError extends Error {
 
 const uploadPartMaxAttempts = 3;
 
+function backblazeErrorMessage(status: number, responseText: string) {
+  const parser = new DOMParser();
+  const body = responseText.trim();
+
+  if (!body) return `Part upload failed with status ${status}.`;
+
+  const xml = parser.parseFromString(body, "application/xml");
+  const code = xml.querySelector("Code")?.textContent?.trim();
+  const message = xml.querySelector("Message")?.textContent?.trim();
+  const requestId =
+    xml.querySelector("RequestId")?.textContent?.trim() ||
+    xml.querySelector("RequestID")?.textContent?.trim();
+
+  if (code || message || requestId) {
+    return [
+      `Part upload failed with status ${status}`,
+      code ? `code ${code}` : null,
+      message ? `message: ${message}` : null,
+      requestId ? `request id: ${requestId}` : null,
+    ]
+      .filter(Boolean)
+      .join("; ");
+  }
+
+  return `Part upload failed with status ${status}: ${body.slice(0, 500)}`;
+}
+
 export function FileUploadManager({
   games,
   selectedGameId,
@@ -113,9 +140,7 @@ export function FileUploadManager({
         const responseText = xhr.responseText.trim();
         reject(
           new UploadPartError(
-            responseText
-              ? `Part upload failed with status ${xhr.status}: ${responseText}`
-              : `Part upload failed with status ${xhr.status}.`,
+            backblazeErrorMessage(xhr.status, responseText),
             xhr.status,
           ),
         );
