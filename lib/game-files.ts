@@ -10,12 +10,21 @@ import { game, gameFile } from "@/schema";
 
 export type GameFile = typeof gameFile.$inferSelect;
 
+const filenameSorter = new Intl.Collator("en-US", {
+  numeric: true,
+  sensitivity: "base",
+});
+
 export async function getGameFiles(gameId: string) {
-  return db
+  const files = await db
     .select()
     .from(gameFile)
     .where(eq(gameFile.gameId, gameId))
     .orderBy(asc(gameFile.filename));
+
+  return files.sort((left, right) =>
+    filenameSorter.compare(left.filename, right.filename),
+  );
 }
 
 export async function getGameFile(fileId: string) {

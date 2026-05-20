@@ -7,6 +7,17 @@ export type GameWithResources = Awaited<
   ReturnType<typeof getGameLibrary>
 >[number];
 
+const filenameSorter = new Intl.Collator("en-US", {
+  numeric: true,
+  sensitivity: "base",
+});
+
+function sortFilesByFilename<T extends { filename: string }>(files: T[]) {
+  return [...files].sort((left, right) =>
+    filenameSorter.compare(left.filename, right.filename),
+  );
+}
+
 export async function getGameLibrary({ includeArchived = false } = {}) {
   const baseQuery = db.select().from(game);
   const games = await (includeArchived
@@ -27,7 +38,7 @@ export async function getGameLibrary({ includeArchived = false } = {}) {
   return games.map((item) => ({
     ...item,
     resources: resources.filter((resource) => resource.gameId === item.id),
-    files: files.filter((file) => file.gameId === item.id),
+    files: sortFilesByFilename(files.filter((file) => file.gameId === item.id)),
   }));
 }
 

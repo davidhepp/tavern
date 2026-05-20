@@ -16,6 +16,24 @@ const allowedMimeTypes = new Set([
   "text/plain",
 ]);
 
+const allowedFileExtensions = new Set([
+  ".7z",
+  ".bz2",
+  ".gz",
+  ".json",
+  ".rar",
+  ".tar",
+  ".txt",
+  ".xz",
+  ".zip",
+]);
+
+function fileExtension(filename: string) {
+  const dotIndex = filename.lastIndexOf(".");
+
+  return dotIndex >= 0 ? filename.slice(dotIndex).toLowerCase() : "";
+}
+
 export function sanitizeFilename(filename: string) {
   const normalized = filename
     .normalize("NFKD")
@@ -29,6 +47,10 @@ export function sanitizeFilename(filename: string) {
 
 export function isAllowedGameFileMimeType(mimeType: string) {
   return allowedMimeTypes.has(mimeType.toLowerCase());
+}
+
+export function isAllowedGameFileExtension(filename: string) {
+  return allowedFileExtensions.has(fileExtension(filename));
 }
 
 export function validateGameFileInput({
@@ -47,7 +69,7 @@ export function validateGameFileInput({
   if (sizeBytes > MAX_GAME_FILE_BYTES) {
     return "Files must be 5GB or smaller.";
   }
-  if (!isAllowedGameFileMimeType(mimeType)) {
+  if (!isAllowedGameFileMimeType(mimeType) && !isAllowedGameFileExtension(filename)) {
     return "This file type is not allowed.";
   }
 
