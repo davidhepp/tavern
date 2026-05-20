@@ -49,75 +49,39 @@ Example CORS rule shape:
 
 ## Python Automation
 
-Automation can use the admin API to initialize multipart uploads, upload parts with `boto3`, then complete the upload through the app so metadata is saved only after Backblaze confirms the object.
+The repository includes `scripts/tavern_archive_upload.py` for VPS-side upload automation. It accepts a local archive path or a direct downloadable URL, extracts it with 7-Zip, repacks it as a password-protected `.7z` archive with encrypted filenames, lets you select the target game through the admin API, then uploads the archive through the app's multipart upload endpoints.
 
-```py
-import math
-import os
-import pathlib
-import requests
-import boto3
-from botocore.config import Config
+Install runtime dependencies on the VPS:
 
-APP_URL = os.environ["TAVERN_APP_URL"]
-ADMIN_TOKEN = os.environ["TAVERN_ADMIN_TOKEN"]
-GAME_ID = os.environ["TAVERN_GAME_ID"]
-PATH = pathlib.Path("patch.zip")
-
-headers = {"Authorization": f"Bearer {ADMIN_TOKEN}"}
-mime_type = "application/zip"
-
-init = requests.post(
-    f"{APP_URL}/api/admin/game-files/uploads/init",
-    headers={**headers, "Content-Type": "application/json"},
-    json={
-        "gameId": GAME_ID,
-        "filename": PATH.name,
-        "mimeType": mime_type,
-        "sizeBytes": PATH.stat().st_size,
-    },
-    timeout=30,
-)
-init.raise_for_status()
-upload = init.json()
-
-s3 = boto3.client(
-    "s3",
-    endpoint_url=os.environ["BACKBLAZE_B2_ENDPOINT"],
-    region_name=os.environ["BACKBLAZE_B2_REGION"],
-    aws_access_key_id=os.environ["BACKBLAZE_B2_KEY_ID"],
-    aws_secret_access_key=os.environ["BACKBLAZE_B2_APPLICATION_KEY"],
-    config=Config(signature_version="s3v4"),
-)
-
-parts = []
-part_size = upload["partSizeBytes"]
-
-with PATH.open("rb") as file:
-    for part in upload["parts"]:
-        file.seek((part["partNumber"] - 1) * part_size)
-        body = file.read(part_size)
-        response = requests.put(part["url"], data=body, timeout=300)
-        response.raise_for_status()
-        parts.append({
-            "partNumber": part["partNumber"],
-            "etag": response.headers["ETag"],
-        })
-
-complete = requests.post(
-    f"{APP_URL}/api/admin/game-files/uploads/complete",
-    headers={**headers, "Content-Type": "application/json"},
-    json={
-        "gameId": GAME_ID,
-        "filename": upload["filename"],
-        "mimeType": mime_type,
-        "sizeBytes": PATH.stat().st_size,
-        "storageKey": upload["storageKey"],
-        "uploadId": upload["uploadId"],
-        "parts": parts,
-    },
-    timeout=30,
-)
-complete.raise_for_status()
-print(complete.json()["file"]["id"])
+```sh
+sudo apt-get update
+sudo apt-get install -y p7zip-full python3-venv
+python3 -m venv .venv
+. .venv/bin/activate
+pip install requests
 ```
+
+Set the app URL and an admin API token:
+
+```sh
+export TAVERN_APP_URL="https://tavern.dasky.dev"
+export TAVERN_ADMIN_TOKEN="paste-raw-admin-token-here"
+```
+
+Upload a local archive:
+
+```sh
+python scripts/tavern_archive_upload.py ./source.7z \
+  --extract-password "source-archive-password" \
+  --archive-password "tavern"
+```
+
+Upload from a direct downloadable URL:
+
+```sh
+python scripts/tavern_archive_upload.py "https://example.com/direct-file.7z" \
+  --extract-password "source-archive-password" \
+  --archive-password "tavern"
+```
+
+The script does not resolve file-hosting web pages into raw links. Download those files locally first or provide a direct URL.
