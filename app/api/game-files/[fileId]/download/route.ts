@@ -29,5 +29,8 @@ export async function GET(
     return Response.json({ error: "Not authorized for this game." }, { status: 403 });
   }
 
-  redirect(await signedDownloadUrl(file.storageKey));
+  redirect(await signedDownloadUrl({
+    key: file.storageKey,
+    filename: file.filename,
+  }));
 }

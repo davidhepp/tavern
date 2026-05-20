@@ -156,10 +156,26 @@ export async function headGameFileObject(key: string) {
   );
 }
 
-export async function signedDownloadUrl(key: string) {
+function downloadContentDisposition(filename: string) {
+  const fallbackFilename = filename.replace(/[^\x20-\x7e]+/g, "_");
+  const encodedFilename = encodeURIComponent(filename).replace(/['()]/g, (match) =>
+    `%${match.charCodeAt(0).toString(16).toUpperCase()}`,
+  );
+
+  return `attachment; filename="${fallbackFilename.replace(/["\\]/g, "_")}"; filename*=UTF-8''${encodedFilename}`;
+}
+
+export async function signedDownloadUrl({
+  key,
+  filename,
+}: {
+  key: string;
+  filename: string;
+}) {
   const command = new GetObjectCommand({
     Bucket: bucketName(),
     Key: key,
+    ResponseContentDisposition: downloadContentDisposition(filename),
   });
 
   return getSignedUrl(backblazeClient(), command, {
