@@ -6,7 +6,7 @@ import {
   sanitizeFilename,
 } from "@/lib/game-file-constraints";
 import { db } from "@/lib/db";
-import { game, gameFile } from "@/schema";
+import { game, gameFile, gameFileDownload } from "@/schema";
 
 export type GameFile = typeof gameFile.$inferSelect;
 
@@ -35,6 +35,28 @@ export async function getGameFile(fileId: string) {
     .limit(1);
 
   return record;
+}
+
+export async function recordGameFileDownload({
+  fileId,
+  userId,
+}: {
+  fileId: string;
+  userId: string;
+}) {
+  await db
+    .insert(gameFileDownload)
+    .values({
+      id: crypto.randomUUID(),
+      fileId,
+      userId,
+    })
+    .onConflictDoUpdate({
+      target: [gameFileDownload.fileId, gameFileDownload.userId],
+      set: {
+        updatedAt: new Date(),
+      },
+    });
 }
 
 export async function getGameStorageBytes(

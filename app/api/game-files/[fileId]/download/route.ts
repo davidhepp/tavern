@@ -1,9 +1,10 @@
+import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { auth } from "@/lib/auth";
 import { userCanAccessGame } from "@/lib/game-authorization";
-import { getGameFile } from "@/lib/game-files";
+import { getGameFile, recordGameFileDownload } from "@/lib/game-files";
 import { signedDownloadUrl } from "@/lib/storage/backblaze";
 
 export async function GET(
@@ -28,6 +29,12 @@ export async function GET(
   if (!canAccess) {
     return Response.json({ error: "Not authorized for this game." }, { status: 403 });
   }
+
+  await recordGameFileDownload({
+    fileId: file.id,
+    userId: session.user.id,
+  });
+  revalidatePath("/");
 
   redirect(await signedDownloadUrl({
     key: file.storageKey,

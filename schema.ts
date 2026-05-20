@@ -199,6 +199,32 @@ export const gameFile = pgTable(
   ],
 );
 
+export const gameFileDownload = pgTable(
+  "game_file_download",
+  {
+    id: text("id").primaryKey(),
+    fileId: text("file_id")
+      .notNull()
+      .references(() => gameFile.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .$onUpdate(() => /* @__PURE__ */ new Date())
+      .notNull(),
+  },
+  (table) => [
+    uniqueIndex("game_file_download_file_user_idx").on(
+      table.fileId,
+      table.userId,
+    ),
+    index("game_file_download_file_id_idx").on(table.fileId),
+    index("game_file_download_user_id_idx").on(table.userId),
+  ],
+);
+
 export const userRelations = relations(user, ({ many }) => ({
   sessions: many(session),
   accounts: many(account),
@@ -216,6 +242,7 @@ export const userRelations = relations(user, ({ many }) => ({
   updatedGameResources: many(gameResource, {
     relationName: "updatedGameResources",
   }),
+  gameFileDownloads: many(gameFileDownload),
 }));
 
 export const sessionRelations = relations(session, ({ one }) => ({
@@ -277,9 +304,24 @@ export const gameResourceRelations = relations(gameResource, ({ one }) => ({
   }),
 }));
 
-export const gameFileRelations = relations(gameFile, ({ one }) => ({
+export const gameFileRelations = relations(gameFile, ({ many, one }) => ({
   game: one(game, {
     fields: [gameFile.gameId],
     references: [game.id],
   }),
+  downloads: many(gameFileDownload),
 }));
+
+export const gameFileDownloadRelations = relations(
+  gameFileDownload,
+  ({ one }) => ({
+    file: one(gameFile, {
+      fields: [gameFileDownload.fileId],
+      references: [gameFile.id],
+    }),
+    user: one(user, {
+      fields: [gameFileDownload.userId],
+      references: [user.id],
+    }),
+  }),
+);

@@ -1,7 +1,7 @@
 import { asc, desc, eq, sql } from "drizzle-orm";
 
 import { db } from "@/lib/db";
-import { game, gameFile, gameResource } from "@/schema";
+import { game, gameFile, gameFileDownload, gameResource, user } from "@/schema";
 
 export type GameWithResources = Awaited<
   ReturnType<typeof getGameLibrary>
@@ -34,11 +34,38 @@ export async function getGameLibrary({ includeArchived = false } = {}) {
     .select()
     .from(gameFile)
     .orderBy(asc(gameFile.filename));
+  const downloaders = await db
+    .select({
+      fileId: gameFileDownload.fileId,
+      userId: user.id,
+      name: user.name,
+      email: user.email,
+      downloadedAt: gameFileDownload.updatedAt,
+    })
+    .from(gameFileDownload)
+    .innerJoin(user, eq(gameFileDownload.userId, user.id))
+    .orderBy(asc(user.name), asc(user.email));
 
   return games.map((item) => ({
     ...item,
     resources: resources.filter((resource) => resource.gameId === item.id),
-    files: sortFilesByFilename(files.filter((file) => file.gameId === item.id)),
+    files: sortFilesByFilename(files.filter((file) => file.gameId === item.id)).map(
+      (file) => {
+        const fileDownloaders = downloaders
+          .filter((downloader) => downloader.fileId === file.id)
+          .map((downloader) => ({
+            userId: downloader.userId,
+            username: downloader.name || downloader.email,
+            downloadedAt: downloader.downloadedAt,
+          }));
+
+        return {
+          ...file,
+          downloadCount: fileDownloaders.length,
+          downloaders: fileDownloaders,
+        };
+      },
+    ),
   }));
 }
 

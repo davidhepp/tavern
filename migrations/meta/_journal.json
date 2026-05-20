@@ -43,6 +43,13 @@
       "when": 1779253459438,
       "tag": "0005_safe_nightcrawler",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1779291335852,
+      "tag": "0006_calm_vivisector",
+      "breakpoints": true
     }
   ]
 }
