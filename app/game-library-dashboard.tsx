@@ -109,7 +109,7 @@ export function GameLibraryDashboard({
             <CardHeader>
               <CardTitle>Find resources</CardTitle>
               <CardDescription>
-                Search locally by game, platform, or link type.
+                Search by game, platform, or link type.
               </CardDescription>
             </CardHeader>
             <CardContent>
