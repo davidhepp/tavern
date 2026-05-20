@@ -9,7 +9,6 @@ import {
   LinkIcon,
   Search,
   Settings,
-  Users,
 } from "lucide-react";
 import Link from "next/link";
 import { useDeferredValue, useMemo, useState } from "react";
@@ -26,11 +25,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 import { formatDateTime } from "@/lib/format-date";
 import { formatBytes } from "@/lib/game-file-constraints";
 import type { GameWithResources } from "@/lib/game-library";
@@ -195,12 +189,7 @@ export function GameLibraryDashboard({
                               {formatDateTime(file.createdAt)}
                             </p>
                           </div>
-                          <div className="flex shrink-0 items-center gap-2">
-                            <DownloadersPopover
-                              count={file.downloadCount}
-                              downloaders={file.downloaders}
-                              filename={file.filename}
-                            />
+           
                             <Button size="sm" asChild>
                               <a href={`/api/game-files/${file.id}/download`}>
                                 <Download />
@@ -208,7 +197,6 @@ export function GameLibraryDashboard({
                               </a>
                             </Button>
                           </div>
-                        </div>
                       ))}
                     </div>
                   ) : null}
@@ -282,50 +270,6 @@ export function GameLibraryDashboard({
         )}
       </div>
     </main>
-  );
-}
-
-function DownloadersPopover({
-  count,
-  downloaders,
-  filename,
-}: {
-  count: number;
-  downloaders: { userId: string; username: string }[];
-  filename: string;
-}) {
-  return (
-    <Popover>
-      <PopoverTrigger asChild>
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          className="gap-1.5 px-2"
-          aria-label={`${count} users downloaded ${filename}`}
-        >
-          <Users className="size-3.5" />
-          <span>{count}</span>
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent align="end" className="w-56">
-        <div className="text-sm font-medium">Downloaded by</div>
-        {downloaders.length ? (
-          <ul className="max-h-56 space-y-1 overflow-y-auto">
-            {downloaders.map((downloader) => (
-              <li
-                key={downloader.userId}
-                className="truncate rounded-md px-2 py-1 text-sm text-muted-foreground"
-              >
-                {downloader.username}
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="text-sm text-muted-foreground">No downloads yet.</p>
-        )}
-      </PopoverContent>
-    </Popover>
   );
 }
 
