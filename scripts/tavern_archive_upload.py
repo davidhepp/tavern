@@ -30,6 +30,18 @@ except ModuleNotFoundError:
 
 
 DEFAULT_REPACK_PASSWORD = "tavern"
+DEFAULT_REPACK_DICTIONARY = "1536m"
+REPACK_DICTIONARY_FALLBACKS = (
+    "1536m",
+    "1024m",
+    "768m",
+    "512m",
+    "384m",
+    "256m",
+    "128m",
+    "64m",
+)
+SEVEN_ZIP_MEMORY_ERROR_EXIT_CODE = 8
 DIRECT_DOWNLOAD_EXTENSIONS = {
     ".7z",
     ".bz2",
@@ -53,6 +65,13 @@ class Game:
     title: str
     platform: str | None
     status: str
+
+
+class CommandError(RuntimeError):
+    def __init__(self, command_name: str, returncode: int):
+        self.command_name = command_name
+        self.returncode = returncode
+        super().__init__(f"{command_name} failed with exit code {returncode}.")
 
 
 def env_or_arg(value: str | None, name: str) -> str:
@@ -300,13 +319,13 @@ def prepare_source(source: str, work_dir: pathlib.Path) -> pathlib.Path:
 def run_7z(command: list[str]) -> None:
     process = subprocess.run(command, check=False)
     if process.returncode != 0:
-        raise RuntimeError(f"7-Zip failed with exit code {process.returncode}.")
+        raise CommandError("7-Zip", process.returncode)
 
 
 def run_unrar(command: list[str]) -> None:
     process = subprocess.run(command, check=False)
     if process.returncode != 0:
-        raise RuntimeError(f"unrar failed with exit code {process.returncode}.")
+        raise CommandError("unrar", process.returncode)
 
 
 def extract_archive(
@@ -356,6 +375,9 @@ def repack_archive(
     password: str,
     dictionary: str,
 ) -> None:
+    if output_path.exists():
+        output_path.unlink()
+
     command = [
         seven_zip,
         "a",
@@ -371,6 +393,78 @@ def repack_archive(
         str(source_dir / "."),
     ]
     run_7z(command)
+
+
+def dictionary_size_bytes(value: str) -> int | None:
+    match = re.fullmatch(r"(\d+)([bkmgt]?)", value.strip(), flags=re.I)
+    if not match:
+        return None
+
+    amount = int(match.group(1))
+    unit = match.group(2).lower()
+    multipliers = {
+        "": 1,
+        "b": 1,
+        "k": 1024,
+        "m": 1024**2,
+        "g": 1024**3,
+        "t": 1024**4,
+    }
+    return amount * multipliers[unit]
+
+
+def repack_dictionary_attempts(dictionary: str) -> list[str]:
+    attempts = [dictionary]
+    requested_size = dictionary_size_bytes(dictionary)
+
+    for fallback in REPACK_DICTIONARY_FALLBACKS:
+        if fallback == dictionary:
+            continue
+
+        fallback_size = dictionary_size_bytes(fallback)
+        if requested_size is not None and fallback_size is not None:
+            if fallback_size >= requested_size:
+                continue
+
+        attempts.append(fallback)
+
+    return attempts
+
+
+def repack_archive_with_fallbacks(
+    seven_zip: str,
+    source_dir: pathlib.Path,
+    output_path: pathlib.Path,
+    password: str,
+    dictionary: str,
+) -> str:
+    attempts = repack_dictionary_attempts(dictionary)
+
+    for index, attempt in enumerate(attempts):
+        if index:
+            print(f"Retrying repack with smaller dictionary: {attempt}...")
+        else:
+            print(f"Using 7z dictionary: {attempt}")
+
+        try:
+            repack_archive(seven_zip, source_dir, output_path, password, attempt)
+            return attempt
+        except CommandError as error:
+            if error.returncode != SEVEN_ZIP_MEMORY_ERROR_EXIT_CODE:
+                raise
+
+            if index == len(attempts) - 1:
+                raise SystemExit(
+                    "7-Zip could not allocate enough memory even with the smallest "
+                    f"dictionary fallback ({attempt}). Retry with --dictionary 32m "
+                    "or use a VPS with more RAM."
+                ) from error
+
+            if output_path.exists():
+                output_path.unlink()
+            print(f"7-Zip ran out of memory with dictionary {attempt}.")
+
+    raise RuntimeError("Repack failed before any dictionary attempt completed.")
 
 
 def sha256_file(path: pathlib.Path) -> str:
@@ -473,8 +567,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--output-name", help="Repacked archive filename.")
     parser.add_argument(
         "--dictionary",
-        default="1536m",
-        help="7z dictionary size for compression. Lower this if the VPS runs out of memory.",
+        default=DEFAULT_REPACK_DICTIONARY,
+        help=(
+            "Initial 7z dictionary size for compression. The script retries with "
+            "smaller dictionaries if 7-Zip runs out of memory."
+        ),
     )
     parser.add_argument("--work-dir", help="Directory for temporary extraction/repacking.")
     parser.add_argument("--keep-work", action="store_true", help="Do not delete work files.")
@@ -507,7 +604,7 @@ def main() -> int:
         output_path = work_dir / safe_filename(output_name)
 
         print("Repacking archive...")
-        repack_archive(
+        used_dictionary = repack_archive_with_fallbacks(
             seven_zip,
             extract_dir,
             output_path,
@@ -515,7 +612,10 @@ def main() -> int:
             args.dictionary,
         )
 
-        print(f"Created {output_path.name} ({output_path.stat().st_size} bytes).")
+        print(
+            f"Created {output_path.name} ({output_path.stat().st_size} bytes) "
+            f"with dictionary {used_dictionary}."
+        )
         games = fetch_games(app_url, token)
         game = choose_game(games)
         print(f"Selected: {game.title}")

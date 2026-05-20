@@ -93,3 +93,9 @@ python scripts/tavern_archive_upload.py "https://gofile.io/d/example" \
 ```
 
 GoFile downloads use `yt-dlp`. If a GoFile URL downloads multiple files, the script will process the single archive when exactly one archive file is present; otherwise, run it against a GoFile page containing only the archive you want to upload.
+
+The repack step starts with a `1536m` 7-Zip dictionary and automatically retries with smaller dictionaries if 7-Zip reports that it cannot allocate enough memory. You can also set the starting value manually:
+
+```sh
+python scripts/tavern_archive_upload.py ./source.7z --dictionary 256m
+```
