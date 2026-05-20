@@ -49,7 +49,7 @@ Example CORS rule shape:
 
 ## Python Automation
 
-The repository includes `scripts/tavern_archive_upload.py` for VPS-side upload automation. It accepts a local archive path or a direct downloadable URL, extracts it with 7-Zip, repacks it as a password-protected `.7z` archive with encrypted filenames, lets you select the target game through the admin API, then uploads the archive through the app's multipart upload endpoints.
+The repository includes `scripts/tavern_archive_upload.py` for VPS-side upload automation. It accepts a local archive path, a direct downloadable URL, or a GoFile URL supported by `yt-dlp`, extracts it with 7-Zip, repacks it as a password-protected `.7z` archive with encrypted filenames, lets you select the target game through the admin API, then uploads the archive through the app's multipart upload endpoints.
 
 Install runtime dependencies on the VPS:
 
@@ -58,7 +58,7 @@ sudo apt-get update
 sudo apt-get install -y p7zip-full python3-venv
 python3 -m venv .venv
 . .venv/bin/activate
-pip install requests
+pip install requests yt-dlp
 ```
 
 Set the app URL and an admin API token:
@@ -84,4 +84,12 @@ python scripts/tavern_archive_upload.py "https://example.com/direct-file.7z" \
   --archive-password "tavern"
 ```
 
-The script does not resolve file-hosting web pages into raw links. Download those files locally first or provide a direct URL.
+Upload from GoFile:
+
+```sh
+python scripts/tavern_archive_upload.py "https://gofile.io/d/example" \
+  --extract-password "source-archive-password" \
+  --archive-password "tavern"
+```
+
+GoFile downloads use `yt-dlp`. If a GoFile URL downloads multiple files, the script will process the single archive when exactly one archive file is present; otherwise, run it against a GoFile page containing only the archive you want to upload.

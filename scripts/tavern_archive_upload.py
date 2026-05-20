@@ -3,8 +3,8 @@
 Download or read an archive, extract it with 7-Zip, repack it as an encrypted
 7z archive, then upload it to Tavern through the admin upload API.
 
-This script accepts local paths and direct downloadable URLs. It intentionally
-does not resolve file-hosting pages into raw links.
+This script accepts local paths, direct downloadable URLs, and GoFile pages
+downloadable by yt-dlp.
 """
 
 from __future__ import annotations
@@ -38,6 +38,12 @@ DIRECT_DOWNLOAD_EXTENSIONS = {
     ".tar",
     ".xz",
     ".zip",
+}
+YTDLP_TRANSIENT_EXTENSIONS = {
+    ".part",
+    ".temp",
+    ".tmp",
+    ".ytdl",
 }
 
 
@@ -125,6 +131,24 @@ def find_7z() -> str:
     raise SystemExit("7-Zip was not found. Install 7z/7zz before running this script.")
 
 
+def find_yt_dlp() -> str:
+    path = shutil.which("yt-dlp")
+    if path:
+        return path
+
+    raise SystemExit("yt-dlp was not found. Install it before downloading GoFile URLs.")
+
+
+def is_gofile_page_url(url: str) -> bool:
+    parsed = urlparse(url)
+    host = parsed.netloc.lower()
+    return (
+        parsed.scheme in {"http", "https"}
+        and host in {"gofile.io", "www.gofile.io"}
+        and (parsed.path.startswith("/d/") or parsed.query.startswith("c="))
+    )
+
+
 def safe_filename(value: str) -> str:
     value = unquote(value)
     value = re.sub(r"[^\w.\- ]+", "", value, flags=re.ASCII).strip()
@@ -196,9 +220,67 @@ def download_source(url: str, destination_dir: pathlib.Path) -> pathlib.Path:
     return path
 
 
+def is_transient_download_file(path: pathlib.Path) -> bool:
+    return any(
+        suffix.lower() in YTDLP_TRANSIENT_EXTENSIONS
+        for suffix in path.suffixes
+    )
+
+
+def downloaded_files(path: pathlib.Path) -> list[pathlib.Path]:
+    return sorted(
+        item
+        for item in path.rglob("*")
+        if item.is_file() and not is_transient_download_file(item)
+    )
+
+
+def download_gofile_source(url: str, destination_dir: pathlib.Path) -> pathlib.Path:
+    yt_dlp = find_yt_dlp()
+    gofile_dir = destination_dir / "gofile"
+    gofile_dir.mkdir()
+
+    command = [
+        yt_dlp,
+        "--paths",
+        str(gofile_dir),
+        "--output",
+        "%(title).200B.%(ext)s",
+        url,
+    ]
+    process = subprocess.run(command, check=False)
+    if process.returncode != 0:
+        raise RuntimeError(f"yt-dlp failed with exit code {process.returncode}.")
+
+    files = downloaded_files(gofile_dir)
+    if len(files) == 1:
+        return files[0]
+
+    if not files:
+        raise SystemExit("yt-dlp did not download any files from the GoFile URL.")
+
+    archive_files = [
+        path
+        for path in files
+        if pathlib.PurePosixPath(path.name).suffix.lower() in DIRECT_DOWNLOAD_EXTENSIONS
+    ]
+    if len(archive_files) == 1:
+        return archive_files[0]
+
+    relative_files = "\n".join(f"  - {path.relative_to(gofile_dir)}" for path in files)
+    raise SystemExit(
+        "The GoFile URL downloaded multiple files, but this script can process one "
+        f"archive at a time:\n{relative_files}"
+    )
+
+
 def prepare_source(source: str, work_dir: pathlib.Path) -> pathlib.Path:
     parsed = urlparse(source)
     if parsed.scheme in {"http", "https"}:
+        if is_gofile_page_url(source):
+            print("Downloading GoFile source with yt-dlp...")
+            return download_gofile_source(source, work_dir)
+
         print("Downloading source...")
         return download_source(source, work_dir)
 
