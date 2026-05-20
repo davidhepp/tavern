@@ -28,6 +28,8 @@ const allowedFileExtensions = new Set([
   ".zip",
 ]);
 
+const splitSevenZipVolumePattern = /\.7z\.\d{3,}$/i;
+
 function fileExtension(filename: string) {
   const dotIndex = filename.lastIndexOf(".");
 
@@ -50,7 +52,10 @@ export function isAllowedGameFileMimeType(mimeType: string) {
 }
 
 export function isAllowedGameFileExtension(filename: string) {
-  return allowedFileExtensions.has(fileExtension(filename));
+  return (
+    allowedFileExtensions.has(fileExtension(filename)) ||
+    splitSevenZipVolumePattern.test(filename)
+  );
 }
 
 export function validateGameFileInput({

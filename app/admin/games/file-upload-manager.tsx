@@ -317,7 +317,6 @@ export function FileUploadManager({
                 ref={inputRef}
                 type="file"
                 multiple
-                accept=".7z,.bz2,.gz,.json,.rar,.tar,.txt,.xz,.zip"
                 onChange={(event) =>
                   queueFiles(Array.from(event.currentTarget.files ?? []))
                 }
