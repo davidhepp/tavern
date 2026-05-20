@@ -55,7 +55,7 @@ Install runtime dependencies on the VPS:
 
 ```sh
 sudo apt-get update
-sudo apt-get install -y p7zip-full python3-venv
+sudo apt-get install -y p7zip-full unrar python3-venv
 python3 -m venv .venv
 . .venv/bin/activate
 pip install requests yt-dlp

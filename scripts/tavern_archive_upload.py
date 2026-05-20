@@ -139,6 +139,10 @@ def find_yt_dlp() -> str:
     raise SystemExit("yt-dlp was not found. Install it before downloading GoFile URLs.")
 
 
+def find_unrar() -> str | None:
+    return shutil.which("unrar")
+
+
 def is_gofile_page_url(url: str) -> bool:
     parsed = urlparse(url)
     host = parsed.netloc.lower()
@@ -299,6 +303,12 @@ def run_7z(command: list[str]) -> None:
         raise RuntimeError(f"7-Zip failed with exit code {process.returncode}.")
 
 
+def run_unrar(command: list[str]) -> None:
+    process = subprocess.run(command, check=False)
+    if process.returncode != 0:
+        raise RuntimeError(f"unrar failed with exit code {process.returncode}.")
+
+
 def extract_archive(
   seven_zip: str,
   archive: pathlib.Path,
@@ -309,7 +319,34 @@ def extract_archive(
     if password:
         command.insert(3, f"-p{password}")
 
-    run_7z(command)
+    try:
+        run_7z(command)
+        return
+    except RuntimeError:
+        if archive.suffix.lower() != ".rar":
+            raise
+
+    unrar = find_unrar()
+    if not unrar:
+        raise SystemExit(
+            "7-Zip could not extract this RAR archive, and unrar was not found. "
+            "Install unrar and run the script again."
+        )
+
+    print("7-Zip could not extract this RAR archive. Retrying with unrar...")
+    shutil.rmtree(output_dir, ignore_errors=True)
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    unrar_command = [
+        unrar,
+        "x",
+        "-y",
+        "-o+",
+        f"-p{password}" if password else "-p-",
+        str(archive),
+        f"{output_dir}{os.sep}",
+    ]
+    run_unrar(unrar_command)
 
 
 def repack_archive(
