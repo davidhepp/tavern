@@ -39,6 +39,18 @@ type UploadInitResponse = {
   partCount?: number;
 };
 
+class UploadPartError extends Error {
+  constructor(
+    message: string,
+    readonly status?: number,
+  ) {
+    super(message);
+    this.name = "UploadPartError";
+  }
+}
+
+const uploadPartMaxAttempts = 3;
+
 export function FileUploadManager({
   games,
   selectedGameId,
@@ -100,21 +112,64 @@ export function FileUploadManager({
 
         const responseText = xhr.responseText.trim();
         reject(
-          new Error(
+          new UploadPartError(
             responseText
               ? `Part upload failed with status ${xhr.status}: ${responseText}`
               : `Part upload failed with status ${xhr.status}.`,
+            xhr.status,
           ),
         );
       };
       xhr.onerror = () =>
         reject(
-          new Error(
+          new UploadPartError(
             "Part upload failed. Check the browser Network tab for a blocked Backblaze request; this is often caused by bucket CORS settings.",
           ),
         );
       xhr.send(blob);
     });
+  }
+
+  async function uploadPartWithRetry({
+    init,
+    targetGameId,
+    partNumber,
+    blob,
+    onProgress,
+    onRetry,
+  }: {
+    init: UploadInitResponse;
+    targetGameId: string;
+    partNumber: number;
+    blob: Blob;
+    onProgress: (loaded: number) => void;
+    onRetry: (attempt: number) => void;
+  }) {
+    let lastError: unknown;
+
+    for (let attempt = 1; attempt <= uploadPartMaxAttempts; attempt += 1) {
+      try {
+        const url = await getUploadPartUrl({
+          init,
+          targetGameId,
+          partNumber,
+        });
+
+        return await uploadPart(url, blob, onProgress);
+      } catch (error) {
+        lastError = error;
+
+        if (attempt >= uploadPartMaxAttempts) break;
+
+        onProgress(0);
+        onRetry(attempt + 1);
+        await new Promise((resolve) => setTimeout(resolve, 1000 * attempt));
+      }
+    }
+
+    throw lastError instanceof Error
+      ? lastError
+      : new Error("Part upload failed.");
   }
 
   function updateQueueItem(
@@ -222,22 +277,28 @@ export function FileUploadManager({
         const start = (partNumber - 1) * uploadInit.partSizeBytes;
         const end = Math.min(start + uploadInit.partSizeBytes, file.size);
         const blob = file.slice(start, end);
-        const url = await getUploadPartUrl({
+        const etag = await uploadPartWithRetry({
           init: uploadInit,
           targetGameId,
           partNumber,
-        });
-        const etag = await uploadPart(url, blob, (loaded) => {
-          uploadedByPart.set(partNumber, loaded);
-          const totalLoaded = Array.from(uploadedByPart.values()).reduce(
-            (total, value) => total + value,
-            0,
-          );
+          blob,
+          onProgress: (loaded) => {
+            uploadedByPart.set(partNumber, loaded);
+            const totalLoaded = Array.from(uploadedByPart.values()).reduce(
+              (total, value) => total + value,
+              0,
+            );
 
-          updateQueueItem(item.id, {
-            progress: Math.min(99, Math.round((totalLoaded / file.size) * 100)),
-            message: `Uploading part ${partNumber} of ${partCount}...`,
-          });
+            updateQueueItem(item.id, {
+              progress: Math.min(99, Math.round((totalLoaded / file.size) * 100)),
+              message: `Uploading part ${partNumber} of ${partCount}...`,
+            });
+          },
+          onRetry: (attempt) => {
+            updateQueueItem(item.id, {
+              message: `Retrying part ${partNumber} of ${partCount} (${attempt}/${uploadPartMaxAttempts})...`,
+            });
+          },
         });
 
         uploadedByPart.set(partNumber, blob.size);

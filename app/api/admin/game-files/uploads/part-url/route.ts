@@ -1,6 +1,9 @@
 import { gameExists } from "@/lib/game-files";
 import { requireAdminRouteActor } from "@/lib/admin-auth";
-import { signedUploadPartUrl } from "@/lib/storage/backblaze";
+import {
+  signedUploadPartUrl,
+  uploadUrlTtlSeconds,
+} from "@/lib/storage/backblaze";
 
 type PartUrlBody = {
   gameId?: unknown;
@@ -43,6 +46,6 @@ export async function POST(request: Request) {
       uploadId,
       partNumber,
     }),
-    expiresInSeconds: 15 * 60,
+    expiresInSeconds: uploadUrlTtlSeconds,
   });
 }

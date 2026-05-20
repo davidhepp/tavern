@@ -13,6 +13,7 @@ import { requireAdminRouteActor } from "@/lib/admin-auth";
 import {
   createMultipartUpload,
   signedUploadPartUrl,
+  uploadUrlTtlSeconds,
 } from "@/lib/storage/backblaze";
 
 type UploadInitBody = {
@@ -91,7 +92,7 @@ export async function POST(request: Request) {
     filename: safeFilename,
     partSizeBytes: MULTIPART_PART_SIZE_BYTES,
     partCount,
-    expiresInSeconds: 15 * 60,
+    expiresInSeconds: uploadUrlTtlSeconds,
     ...(parts ? { parts } : {}),
     uploadedBy: actor.uploadedBy,
   });

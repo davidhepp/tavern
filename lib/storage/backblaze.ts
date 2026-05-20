@@ -13,7 +13,7 @@ import {
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 const downloadUrlTtlSeconds = 60;
-const uploadUrlTtlSeconds = 15 * 60;
+export const uploadUrlTtlSeconds = 6 * 60 * 60;
 
 function requiredEnv(name: string) {
   const value = process.env[name];

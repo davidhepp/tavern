@@ -1,6 +1,6 @@
 # Private Game File Storage
 
-This app stores private game files in a Backblaze B2 bucket through the S3-compatible API. The Next.js server never proxies file bytes. It authorizes a request, signs a short-lived URL, and the browser uploads or downloads directly with Backblaze.
+This app stores private game files in a Backblaze B2 bucket through the S3-compatible API. The Next.js server never proxies file bytes. It authorizes a request, signs a direct Backblaze URL, and the browser uploads or downloads directly with Backblaze.
 
 ## Required Environment
 
