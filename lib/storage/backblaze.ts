@@ -1,9 +1,12 @@
 import {
+  AbortMultipartUploadCommand,
   CompleteMultipartUploadCommand,
   CreateMultipartUploadCommand,
   DeleteObjectCommand,
+  DeleteObjectsCommand,
   GetObjectCommand,
   HeadObjectCommand,
+  ListObjectVersionsCommand,
   S3Client,
   UploadPartCommand,
 } from "@aws-sdk/client-s3";
@@ -128,6 +131,22 @@ export async function completeMultipartUpload({
   await backblazeClient().send(command);
 }
 
+export async function abortMultipartUpload({
+  key,
+  uploadId,
+}: {
+  key: string;
+  uploadId: string;
+}) {
+  await backblazeClient().send(
+    new AbortMultipartUploadCommand({
+      Bucket: bucketName(),
+      Key: key,
+      UploadId: uploadId,
+    }),
+  );
+}
+
 export async function headGameFileObject(key: string) {
   return backblazeClient().send(
     new HeadObjectCommand({
@@ -149,6 +168,56 @@ export async function signedDownloadUrl(key: string) {
 }
 
 export async function deleteGameFileObject(key: string) {
+  const client = backblazeClient();
+  const bucket = bucketName();
+  const objects = [];
+  let keyMarker: string | undefined;
+  let versionIdMarker: string | undefined;
+
+  do {
+    const versions = await client.send(
+      new ListObjectVersionsCommand({
+        Bucket: bucket,
+        Prefix: key,
+        KeyMarker: keyMarker,
+        VersionIdMarker: versionIdMarker,
+      }),
+    );
+
+    objects.push(
+      ...[...(versions.Versions ?? []), ...(versions.DeleteMarkers ?? [])]
+        .filter((version) => version.Key === key && version.VersionId)
+        .map((version) => ({
+          Key: key,
+          VersionId: version.VersionId,
+        })),
+    );
+
+    keyMarker = versions.NextKeyMarker;
+    versionIdMarker = versions.NextVersionIdMarker;
+  } while (keyMarker);
+
+  if (!objects.length) {
+    await client.send(
+      new DeleteObjectCommand({
+        Bucket: bucket,
+        Key: key,
+      }),
+    );
+    return;
+  }
+
+  await client.send(
+    new DeleteObjectsCommand({
+      Bucket: bucket,
+      Delete: {
+        Objects: objects,
+      },
+    }),
+  );
+}
+
+export async function hideGameFileObject(key: string) {
   await backblazeClient().send(
     new DeleteObjectCommand({
       Bucket: bucketName(),

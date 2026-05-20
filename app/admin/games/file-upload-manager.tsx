@@ -116,11 +116,24 @@ export function FileUploadManager({
     });
   }
 
+  async function cancelUpload(init: UploadInitResponse) {
+    await fetch("/api/admin/game-files/uploads/cancel", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        gameId,
+        storageKey: init.storageKey,
+        uploadId: init.uploadId,
+      }),
+    });
+  }
+
   async function startUpload() {
     if (!upload.file || !gameId) return;
 
     const file = upload.file;
     const mimeType = file.type || "application/octet-stream";
+    let init: UploadInitResponse | null = null;
 
     setUpload((current) => ({
       ...current,
@@ -148,11 +161,12 @@ export function FileUploadManager({
         throw new Error(body?.error ?? "Upload initialization failed.");
       }
 
-      const init = (await initResponse.json()) as UploadInitResponse;
+      const uploadInit = (await initResponse.json()) as UploadInitResponse;
+      init = uploadInit;
       const uploadedByPart = new Map<number, number>();
       const completedParts = [];
 
-      for (const part of init.parts) {
+      for (const part of uploadInit.parts) {
         const start = (part.partNumber - 1) * MULTIPART_PART_SIZE_BYTES;
         const end = Math.min(start + MULTIPART_PART_SIZE_BYTES, file.size);
         const blob = file.slice(start, end);
@@ -166,7 +180,7 @@ export function FileUploadManager({
           setUpload((current) => ({
             ...current,
             progress: Math.min(99, Math.round((totalLoaded / file.size) * 100)),
-            message: `Uploading part ${part.partNumber} of ${init.parts.length}...`,
+            message: `Uploading part ${part.partNumber} of ${uploadInit.parts.length}...`,
           }));
         });
 
@@ -181,11 +195,11 @@ export function FileUploadManager({
           headers: { "content-type": "application/json" },
           body: JSON.stringify({
             gameId,
-            filename: init.filename,
+            filename: uploadInit.filename,
             mimeType,
             sizeBytes: file.size,
-            storageKey: init.storageKey,
-            uploadId: init.uploadId,
+            storageKey: uploadInit.storageKey,
+            uploadId: uploadInit.uploadId,
             parts: completedParts,
           }),
         },
@@ -198,6 +212,7 @@ export function FileUploadManager({
         throw new Error(body?.error ?? "Upload completion failed.");
       }
 
+      init = null;
       setUpload({
         file: null,
         progress: 100,
@@ -208,6 +223,10 @@ export function FileUploadManager({
       if (inputRef.current) inputRef.current.value = "";
       router.refresh();
     } catch (error) {
+      if (init) {
+        await cancelUpload(init).catch(() => null);
+      }
+
       setUpload((current) => ({
         ...current,
         status: "error",
