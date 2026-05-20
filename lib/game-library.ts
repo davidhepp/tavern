@@ -1,7 +1,7 @@
 import { asc, desc, eq, sql } from "drizzle-orm";
 
 import { db } from "@/lib/db";
-import { game, gameResource } from "@/schema";
+import { game, gameFile, gameResource } from "@/schema";
 
 export type GameWithResources = Awaited<
   ReturnType<typeof getGameLibrary>
@@ -19,10 +19,15 @@ export async function getGameLibrary({ includeArchived = false } = {}) {
     .select()
     .from(gameResource)
     .orderBy(asc(gameResource.sortOrder), asc(gameResource.title));
+  const files = await db
+    .select()
+    .from(gameFile)
+    .orderBy(asc(gameFile.filename));
 
   return games.map((item) => ({
     ...item,
     resources: resources.filter((resource) => resource.gameId === item.id),
+    files: files.filter((file) => file.gameId === item.id),
   }));
 }
 
@@ -35,9 +40,12 @@ export async function getGameLibraryStats() {
   const [resources] = await db
     .select({ count: sql<number>`count(*)::int` })
     .from(gameResource);
+  const [files] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(gameFile);
 
   return {
     games: games?.count ?? 0,
-    resources: resources?.count ?? 0,
+    resources: (resources?.count ?? 0) + (files?.count ?? 0),
   };
 }

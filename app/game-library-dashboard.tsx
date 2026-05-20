@@ -3,6 +3,7 @@
 import {
   ArrowUpRight,
   Boxes,
+  Download,
   FileArchive,
   Gamepad2,
   LinkIcon,
@@ -24,6 +25,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { formatDate } from "@/lib/format-date";
+import { formatBytes } from "@/lib/game-file-constraints";
 import type { GameWithResources } from "@/lib/game-library";
 import { cn } from "@/lib/utils";
 
@@ -58,6 +61,7 @@ export function GameLibraryDashboard({
         game.title,
         game.summary,
         game.platform,
+        ...game.files.map((file) => file.filename),
         ...game.resources.flatMap((resource) => [
           resource.title,
           resource.description,
@@ -162,6 +166,40 @@ export function GameLibraryDashboard({
                   </CardAction>
                 </CardHeader>
                 <CardContent className="space-y-3">
+                  {game.files.length ? (
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 text-sm font-medium">
+                        <FileArchive className="size-4" />
+                        Downloads
+                      </div>
+                      {game.files.map((file) => (
+                        <div
+                          key={file.id}
+                          className="flex items-center gap-3 rounded-lg border p-3"
+                        >
+                          <div className="flex size-8 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
+                            <FileArchive className="size-4" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-sm font-medium">
+                              {file.filename}
+                            </p>
+                            <p className="mt-1 text-xs text-muted-foreground">
+                              {formatBytes(file.sizeBytes)} · Uploaded{" "}
+                              {formatDate(file.createdAt)}
+                            </p>
+                          </div>
+                          <Button size="sm" asChild>
+                            <a href={`/api/game-files/${file.id}/download`}>
+                              <Download />
+                              Download
+                            </a>
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  ) : null}
+
                   {game.resources.length ? (
                     game.resources.map((resource) => {
                       const Icon = resourceIcon(resource.resourceType);
@@ -196,7 +234,7 @@ export function GameLibraryDashboard({
                         </a>
                       );
                     })
-                  ) : (
+                  ) : game.files.length ? null : (
                     <p className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
                       No resources have been added for this game yet.
                     </p>

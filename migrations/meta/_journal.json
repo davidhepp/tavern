@@ -36,6 +36,13 @@
       "when": 1779204800873,
       "tag": "0004_happy_doctor_octopus",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1779253459438,
+      "tag": "0005_safe_nightcrawler",
+      "breakpoints": true
     }
   ]
 }

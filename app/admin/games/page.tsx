@@ -36,6 +36,7 @@ import {
   updateResourceAction,
 } from "@/app/admin/games/actions";
 import { GameActionToaster } from "@/app/admin/games/action-toaster";
+import { FileUploadManager } from "@/app/admin/games/file-upload-manager";
 import {
   PlatformMultiSelect,
   ResourceTypeSelect,
@@ -151,6 +152,19 @@ export default async function AdminGamesPage({
                   </CardHeader>
                   <CardContent className="space-y-5">
                     <GameForm game={selectedGame} />
+
+                    <Separator />
+
+                    <div className="grid gap-3">
+                      <div className="flex items-center gap-2 text-sm font-medium">
+                        <FileArchive className="size-4" />
+                        Private downloads
+                      </div>
+                      <FileUploadManager
+                        games={library}
+                        selectedGameId={selectedGame.id}
+                      />
+                    </div>
 
                     <Separator />
 

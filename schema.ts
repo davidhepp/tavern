@@ -1,6 +1,7 @@
 import { relations } from "drizzle-orm";
 import {
   boolean,
+  bigint,
   index,
   integer,
   pgTable,
@@ -173,6 +174,31 @@ export const gameResource = pgTable(
   ],
 );
 
+export const gameFile = pgTable(
+  "game_file",
+  {
+    id: text("id").primaryKey(),
+    gameId: text("game_id")
+      .notNull()
+      .references(() => game.id, { onDelete: "cascade" }),
+    filename: text("filename").notNull(),
+    storageKey: text("storage_key").notNull(),
+    mimeType: text("mime_type").notNull(),
+    sizeBytes: bigint("size_bytes", { mode: "number" }).notNull(),
+    checksum: text("checksum"),
+    uploadedBy: text("uploaded_by").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .$onUpdate(() => /* @__PURE__ */ new Date())
+      .notNull(),
+  },
+  (table) => [
+    index("game_file_game_id_idx").on(table.gameId),
+    uniqueIndex("game_file_storage_key_idx").on(table.storageKey),
+  ],
+);
+
 export const userRelations = relations(user, ({ many }) => ({
   sessions: many(session),
   accounts: many(account),
@@ -221,6 +247,7 @@ export const invitationCodeRelations = relations(invitationCode, ({ one }) => ({
 
 export const gameRelations = relations(game, ({ many, one }) => ({
   resources: many(gameResource),
+  files: many(gameFile),
   creator: one(user, {
     fields: [game.createdBy],
     references: [user.id],
@@ -247,5 +274,12 @@ export const gameResourceRelations = relations(gameResource, ({ one }) => ({
     fields: [gameResource.updatedBy],
     references: [user.id],
     relationName: "updatedGameResources",
+  }),
+}));
+
+export const gameFileRelations = relations(gameFile, ({ one }) => ({
+  game: one(game, {
+    fields: [gameFile.gameId],
+    references: [game.id],
   }),
 }));
