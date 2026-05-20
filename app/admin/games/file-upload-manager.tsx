@@ -15,7 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { formatDate } from "@/lib/format-date";
+import { formatDateTime } from "@/lib/format-date";
 import {
   formatBytes,
   MULTIPART_PART_SIZE_BYTES,
@@ -409,7 +409,7 @@ export function FileUploadManager({
                 <p className="truncate text-sm font-medium">{file.filename}</p>
                 <p className="text-xs text-muted-foreground">
                   {formatBytes(file.sizeBytes)} · {file.mimeType} ·{" "}
-                  {formatDate(file.createdAt)}
+                  {formatDateTime(file.createdAt)}
                 </p>
               </div>
               <Button

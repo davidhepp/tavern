@@ -25,7 +25,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { formatDate } from "@/lib/format-date";
+import { formatDateTime } from "@/lib/format-date";
 import { formatBytes } from "@/lib/game-file-constraints";
 import type { GameWithResources } from "@/lib/game-library";
 import { cn } from "@/lib/utils";
@@ -186,7 +186,7 @@ export function GameLibraryDashboard({
                             </p>
                             <p className="mt-1 text-xs text-muted-foreground">
                               {formatBytes(file.sizeBytes)} · Uploaded{" "}
-                              {formatDate(file.createdAt)}
+                              {formatDateTime(file.createdAt)}
                             </p>
                           </div>
                           <Button size="sm" asChild>
