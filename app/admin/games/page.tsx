@@ -43,6 +43,7 @@ import {
   TitleInput,
 } from "@/app/admin/games/form-controls";
 import { auth } from "@/lib/auth";
+import { getDeployVersion } from "@/lib/deploy-version";
 import { getGameLibrary } from "@/lib/game-library";
 import { getQueryClient } from "@/lib/query-client";
 
@@ -86,7 +87,7 @@ export default async function AdminGamesPage({
       <GameActionToaster success={success} error={error} />
       <main className="min-h-dvh bg-background">
         <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-4 md:px-6 md:py-6">
-          <AdminNav />
+          <AdminNav deployVersion={getDeployVersion()} />
 
           <header>
             <div>

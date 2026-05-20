@@ -36,6 +36,7 @@ import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { getDeployVersion } from "@/lib/deploy-version";
 import { getQueryClient } from "@/lib/query-client";
 import { cn } from "@/lib/utils";
 import { invitationCode, user as userTable } from "@/schema";
@@ -425,7 +426,7 @@ export default async function AdminPage({
     <HydrationBoundary state={dehydrate(queryClient)}>
       <main className="min-h-dvh bg-background">
         <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-4 md:px-6 md:py-6">
-          <AdminNav />
+          <AdminNav deployVersion={getDeployVersion()} />
 
           <header>
             <div>

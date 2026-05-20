@@ -14,7 +14,7 @@ const items = [
   { href: "/admin/games", label: "Game library", icon: Gamepad2 },
 ];
 
-export function AdminNav() {
+export function AdminNav({ deployVersion }: { deployVersion: string }) {
   const pathname = usePathname();
 
   return (
@@ -46,7 +46,15 @@ export function AdminNav() {
           );
         })}
       </div>
-      <UserButton size="icon" align="end" />
+      <div className="flex items-center gap-2">
+        <span
+          className="rounded-md border bg-muted px-2 py-1 text-xs text-muted-foreground"
+          title="Current deployment version"
+        >
+          {deployVersion}
+        </span>
+        <UserButton size="icon" align="end" />
+      </div>
     </nav>
   );
 }
