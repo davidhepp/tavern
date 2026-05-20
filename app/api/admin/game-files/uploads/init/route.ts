@@ -21,6 +21,7 @@ type UploadInitBody = {
   mimeType?: unknown;
   sizeBytes?: unknown;
   checksum?: unknown;
+  includePartUrls?: unknown;
 };
 
 export async function POST(request: Request) {
@@ -33,6 +34,7 @@ export async function POST(request: Request) {
   const mimeType = typeof body?.mimeType === "string" ? body.mimeType : "";
   const sizeBytes = Number(body?.sizeBytes);
   const checksum = typeof body?.checksum === "string" ? body.checksum.trim() : "";
+  const includePartUrls = body?.includePartUrls !== false;
   const validationError = validateGameFileInput({
     filename,
     mimeType,
@@ -66,28 +68,31 @@ export async function POST(request: Request) {
     checksum: checksum || null,
   });
   const partCount = multipartPartCount(sizeBytes);
-  const parts = await Promise.all(
-    Array.from({ length: partCount }, async (_, index) => {
-      const partNumber = index + 1;
+  const parts = includePartUrls
+    ? await Promise.all(
+        Array.from({ length: partCount }, async (_, index) => {
+          const partNumber = index + 1;
 
-      return {
-        partNumber,
-        url: await signedUploadPartUrl({
-          key: storageKey,
-          uploadId,
-          partNumber,
+          return {
+            partNumber,
+            url: await signedUploadPartUrl({
+              key: storageKey,
+              uploadId,
+              partNumber,
+            }),
+          };
         }),
-      };
-    }),
-  );
+      )
+    : undefined;
 
   return Response.json({
     uploadId,
     storageKey,
     filename: safeFilename,
     partSizeBytes: MULTIPART_PART_SIZE_BYTES,
+    partCount,
     expiresInSeconds: 15 * 60,
-    parts,
+    ...(parts ? { parts } : {}),
     uploadedBy: actor.uploadedBy,
   });
 }

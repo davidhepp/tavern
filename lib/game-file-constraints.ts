@@ -1,5 +1,5 @@
-export const MAX_GAME_FILE_BYTES = 5 * 1024 * 1024 * 1024;
 export const MAX_GAME_STORAGE_BYTES = 15 * 1024 * 1024 * 1024;
+export const MAX_GAME_FILE_BYTES = 5 * 1024 * 1024 * 1024;
 export const MULTIPART_PART_SIZE_BYTES = 100 * 1024 * 1024;
 
 const allowedMimeTypes = new Set([

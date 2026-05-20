@@ -18,7 +18,6 @@ import {
 import { formatDateTime } from "@/lib/format-date";
 import {
   formatBytes,
-  MULTIPART_PART_SIZE_BYTES,
   validateGameFileInput,
 } from "@/lib/game-file-constraints";
 import type { GameWithResources } from "@/lib/game-library";
@@ -36,7 +35,8 @@ type UploadInitResponse = {
   storageKey: string;
   filename: string;
   partSizeBytes: number;
-  parts: { partNumber: number; url: string }[];
+  parts?: { partNumber: number; url: string }[];
+  partCount?: number;
 };
 
 export function FileUploadManager({
@@ -140,6 +140,42 @@ export function FileUploadManager({
     });
   }
 
+  async function getUploadPartUrl({
+    init,
+    targetGameId,
+    partNumber,
+  }: {
+    init: UploadInitResponse;
+    targetGameId: string;
+    partNumber: number;
+  }) {
+    const response = await fetch("/api/admin/game-files/uploads/part-url", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        gameId: targetGameId,
+        storageKey: init.storageKey,
+        uploadId: init.uploadId,
+        partNumber,
+      }),
+    });
+
+    if (!response.ok) {
+      const body = (await response.json().catch(() => null)) as
+        | { error?: string }
+        | null;
+      throw new Error(body?.error ?? "Part upload URL generation failed.");
+    }
+
+    const body = (await response.json()) as { url?: string };
+
+    if (!body.url) {
+      throw new Error("Part upload URL generation failed.");
+    }
+
+    return body.url;
+  }
+
   async function uploadFile(item: UploadQueueItem, targetGameId: string) {
     const file = item.file;
     const mimeType = file.type || "application/octet-stream";
@@ -160,6 +196,7 @@ export function FileUploadManager({
           filename: file.name,
           mimeType,
           sizeBytes: file.size,
+          includePartUrls: false,
         }),
       });
 
@@ -174,13 +211,24 @@ export function FileUploadManager({
       init = uploadInit;
       const uploadedByPart = new Map<number, number>();
       const completedParts = [];
+      const partCount =
+        uploadInit.partCount ?? uploadInit.parts?.length ?? 0;
 
-      for (const part of uploadInit.parts) {
-        const start = (part.partNumber - 1) * MULTIPART_PART_SIZE_BYTES;
-        const end = Math.min(start + MULTIPART_PART_SIZE_BYTES, file.size);
+      if (!partCount) {
+        throw new Error("Upload initialization did not return any parts.");
+      }
+
+      for (let partNumber = 1; partNumber <= partCount; partNumber += 1) {
+        const start = (partNumber - 1) * uploadInit.partSizeBytes;
+        const end = Math.min(start + uploadInit.partSizeBytes, file.size);
         const blob = file.slice(start, end);
-        const etag = await uploadPart(part.url, blob, (loaded) => {
-          uploadedByPart.set(part.partNumber, loaded);
+        const url = await getUploadPartUrl({
+          init: uploadInit,
+          targetGameId,
+          partNumber,
+        });
+        const etag = await uploadPart(url, blob, (loaded) => {
+          uploadedByPart.set(partNumber, loaded);
           const totalLoaded = Array.from(uploadedByPart.values()).reduce(
             (total, value) => total + value,
             0,
@@ -188,12 +236,12 @@ export function FileUploadManager({
 
           updateQueueItem(item.id, {
             progress: Math.min(99, Math.round((totalLoaded / file.size) * 100)),
-            message: `Uploading part ${part.partNumber} of ${uploadInit.parts.length}...`,
+            message: `Uploading part ${partNumber} of ${partCount}...`,
           });
         });
 
-        uploadedByPart.set(part.partNumber, blob.size);
-        completedParts.push({ partNumber: part.partNumber, etag });
+        uploadedByPart.set(partNumber, blob.size);
+        completedParts.push({ partNumber, etag });
       }
 
       const completeResponse = await fetch(
