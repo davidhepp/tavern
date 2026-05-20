@@ -122,7 +122,7 @@ export default async function AdminGamesPage({
                               {game.title}
                             </p>
                             <p className="truncate text-xs opacity-75">
-                              {game.platform || "Any platform"} · {game.resources.length} resources
+                              {game.platform || "Any platform"} · {game.resources.length} resources, {game.files.length} files
                             </p>
                           </div>
                         </Link>
