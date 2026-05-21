@@ -15,9 +15,11 @@ import {
   type ComponentType,
   isValidElement,
   type ReactElement,
-  type ReactNode
+  type ReactNode,
+  useState
 } from "react"
 
+import { SettingsDialog } from "@/components/auth/settings/settings-dialog"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -118,6 +120,7 @@ export function UserButton({
     useAuth()
 
   const { data: session, isPending: sessionPending } = useSession(authClient)
+  const [settingsOpen, setSettingsOpen] = useState(false)
   const userRole =
     session && "role" in session.user
       ? (session.user.role as string | undefined)
@@ -133,117 +136,119 @@ export function UserButton({
   })
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger
-        className={cn(
-          size === "icon" && "rounded-full",
-          size === "icon" && className
-        )}
-        asChild={size === "default"}
-      >
-        {size === "icon" ? (
-          <UserAvatar />
-        ) : (
-          <Button
-            variant={variant}
-            className={cn("py-2.5 h-auto font-normal", className)}
-            size="lg"
-          >
-            {session || sessionPending ? (
-              <UserView />
-            ) : (
-              <>
-                <UserAvatar />
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          className={cn(
+            size === "icon" && "rounded-full",
+            size === "icon" && className
+          )}
+          asChild={size === "default"}
+        >
+          {size === "icon" ? (
+            <UserAvatar />
+          ) : (
+            <Button
+              variant={variant}
+              className={cn("py-2.5 h-auto font-normal", className)}
+              size="lg"
+            >
+              {session || sessionPending ? (
+                <UserView />
+              ) : (
+                <>
+                  <UserAvatar />
 
-                <div className="grid flex-1 text-left text-sm leading-tight">
-                  {localization.auth.account}
-                </div>
-              </>
-            )}
+                  <div className="grid flex-1 text-left text-sm leading-tight">
+                    {localization.auth.account}
+                  </div>
+                </>
+              )}
 
-            <ChevronsUpDown className="ml-auto" />
-          </Button>
-        )}
-      </DropdownMenuTrigger>
+              <ChevronsUpDown className="ml-auto" />
+            </Button>
+          )}
+        </DropdownMenuTrigger>
 
-      <DropdownMenuContent
-        className="w-[--radix-dropdown-menu-trigger-width] min-w-40 md:min-w-56 max-w-[48svw]"
-        sideOffset={sideOffset}
-        align={align}
-        onCloseAutoFocus={(e) => e.preventDefault()}
-      >
-        {session && (
-          <>
-            <DropdownMenuLabel className="text-sm font-normal">
-              <UserView />
-            </DropdownMenuLabel>
+        <DropdownMenuContent
+          className="w-[--radix-dropdown-menu-trigger-width] min-w-40 md:min-w-56 max-w-[48svw]"
+          sideOffset={sideOffset}
+          align={align}
+          onCloseAutoFocus={(e) => e.preventDefault()}
+        >
+          {session && (
+            <>
+              <DropdownMenuLabel className="text-sm font-normal">
+                <UserView />
+              </DropdownMenuLabel>
 
-            <DropdownMenuSeparator />
-          </>
-        )}
+              <DropdownMenuSeparator />
+            </>
+          )}
 
-        {session ? (
-          <>
-            {userLinks}
+          {session ? (
+            <>
+              {userLinks}
 
-            {!hideSettings && (
-              <DropdownMenuItem asChild>
-                <Link
-                  href={`${basePaths.settings}/${viewPaths.settings.account}`}
-                >
+              {!hideSettings && (
+                <DropdownMenuItem onSelect={() => setSettingsOpen(true)}>
                   <Settings className="text-muted-foreground" />
 
                   {localization.settings.settings}
-                </Link>
-              </DropdownMenuItem>
-            )}
+                </DropdownMenuItem>
+              )}
 
-            {userRole?.split(",").includes("admin") && (
+              {userRole?.split(",").includes("admin") && (
+                <DropdownMenuItem asChild>
+                  <Link href="/admin">
+                    <ShieldCheck className="text-muted-foreground" />
+
+                    Admin
+                  </Link>
+                </DropdownMenuItem>
+              )}
+
+              {plugins.flatMap((plugin) =>
+                plugin.userMenuItems?.map((Item, index) => (
+                  <Item key={`${plugin.id}-${index.toString()}`} />
+                ))
+              )}
+
+              <DropdownMenuSeparator />
+
               <DropdownMenuItem asChild>
-                <Link href="/admin">
-                  <ShieldCheck className="text-muted-foreground" />
+                <Link href={`${basePaths.auth}/${viewPaths.auth.signOut}`}>
+                  <LogOut className="text-muted-foreground" />
 
-                  Admin
+                  {localization.auth.signOut}
                 </Link>
               </DropdownMenuItem>
-            )}
+            </>
+          ) : (
+            <>
+              {userLinks}
 
-            {plugins.flatMap((plugin) =>
-              plugin.userMenuItems?.map((Item, index) => (
-                <Item key={`${plugin.id}-${index.toString()}`} />
-              ))
-            )}
+              <DropdownMenuItem asChild>
+                <Link href={`${basePaths.auth}/${viewPaths.auth.signIn}`}>
+                  <LogIn className="text-muted-foreground" />
 
-            <DropdownMenuSeparator />
+                  {localization.auth.signIn}
+                </Link>
+              </DropdownMenuItem>
 
-            <DropdownMenuItem asChild>
-              <Link href={`${basePaths.auth}/${viewPaths.auth.signOut}`}>
-                <LogOut className="text-muted-foreground" />
+              {plugins.flatMap((plugin) =>
+                plugin.userMenuItems?.map((Item, index) => (
+                  <Item key={`${plugin.id}-${index.toString()}`} />
+                ))
+              )}
+            </>
+          )}
+        </DropdownMenuContent>
+      </DropdownMenu>
 
-                {localization.auth.signOut}
-              </Link>
-            </DropdownMenuItem>
-          </>
-        ) : (
-          <>
-            {userLinks}
-
-            <DropdownMenuItem asChild>
-              <Link href={`${basePaths.auth}/${viewPaths.auth.signIn}`}>
-                <LogIn className="text-muted-foreground" />
-
-                {localization.auth.signIn}
-              </Link>
-            </DropdownMenuItem>
-
-            {plugins.flatMap((plugin) =>
-              plugin.userMenuItems?.map((Item, index) => (
-                <Item key={`${plugin.id}-${index.toString()}`} />
-              ))
-            )}
-          </>
-        )}
-      </DropdownMenuContent>
-    </DropdownMenu>
+      {session ? (
+        <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
+      ) : null}
+    </>
   )
 }

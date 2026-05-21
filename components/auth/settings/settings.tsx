@@ -2,7 +2,7 @@
 
 import type { SettingsView } from "@better-auth-ui/core"
 import { useAuth, useAuthenticate } from "@better-auth-ui/react"
-import { useMemo } from "react"
+import { useMemo, useState } from "react"
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { cn } from "@/lib/utils"
@@ -15,6 +15,7 @@ export type SettingsProps = {
   /** @remarks `SettingsView` */
   view?: SettingsView
   hideNav?: boolean
+  navigation?: "links" | "local"
 }
 
 /**
@@ -26,7 +27,13 @@ export type SettingsProps = {
  * @param hideNav - When `true`, hides the settings navigation tabs
  * @returns A JSX element rendering the settings layout and the selected settings panel
  */
-export function Settings({ className, view, path, hideNav }: SettingsProps) {
+export function Settings({
+  className,
+  view,
+  path,
+  hideNav,
+  navigation = "links"
+}: SettingsProps) {
   const { authClient, basePaths, localization, viewPaths, Link } = useAuth()
   useAuthenticate(authClient)
 
@@ -42,26 +49,45 @@ export function Settings({ className, view, path, hideNav }: SettingsProps) {
     [viewPaths.settings]
   )
 
-  const currentView = view || (path ? settingsPathViews[path] : undefined)
+  const initialView = view || (path ? settingsPathViews[path] : undefined)
+  const [localView, setLocalView] = useState<SettingsView>(
+    initialView ?? "account"
+  )
+  const currentView = navigation === "local" ? localView : initialView
 
   return (
     <Tabs
       value={currentView}
+      onValueChange={(value) => setLocalView(value as SettingsView)}
       className={cn("w-full gap-4 md:gap-6", className)}
     >
       <div className={cn(hideNav && "hidden")}>
         <TabsList aria-label={localization.settings.settings}>
-          <TabsTrigger value="account" asChild>
-            <Link href={`${basePaths.settings}/${viewPaths.settings.account}`}>
+          {navigation === "links" ? (
+            <TabsTrigger value="account" asChild>
+              <Link href={`${basePaths.settings}/${viewPaths.settings.account}`}>
+                {localization.settings.account}
+              </Link>
+            </TabsTrigger>
+          ) : (
+            <TabsTrigger value="account">
               {localization.settings.account}
-            </Link>
-          </TabsTrigger>
+            </TabsTrigger>
+          )}
 
-          <TabsTrigger value="security" asChild>
-            <Link href={`${basePaths.settings}/${viewPaths.settings.security}`}>
+          {navigation === "links" ? (
+            <TabsTrigger value="security" asChild>
+              <Link
+                href={`${basePaths.settings}/${viewPaths.settings.security}`}
+              >
+                {localization.settings.security}
+              </Link>
+            </TabsTrigger>
+          ) : (
+            <TabsTrigger value="security">
               {localization.settings.security}
-            </Link>
-          </TabsTrigger>
+            </TabsTrigger>
+          )}
         </TabsList>
       </div>
 
