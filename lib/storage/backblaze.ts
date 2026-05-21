@@ -47,6 +47,8 @@ export function backblazeClient() {
   return new S3Client({
     endpoint: endpointUrl(),
     region: requiredEnv("BACKBLAZE_B2_REGION"),
+    requestChecksumCalculation: "WHEN_REQUIRED",
+    responseChecksumValidation: "WHEN_REQUIRED",
     credentials: {
       accessKeyId: requiredEnv("BACKBLAZE_B2_KEY_ID"),
       secretAccessKey: requiredEnv("BACKBLAZE_B2_APPLICATION_KEY"),

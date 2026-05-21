@@ -519,6 +519,22 @@ def cancel_upload(app_url: str, token: str, game_id: str, upload: dict[str, Any]
     )
 
 
+def raise_part_upload_error(response: requests.Response, part_number: int) -> None:
+    body = response.text.strip()
+    details = f"Part {part_number} upload failed with status {response.status_code}."
+
+    if body:
+        details = f"{details}\nBackblaze response:\n{body[:2000]}"
+
+    if "x-amz-checksum-crc32=AAAAAA" in response.url:
+        details = (
+            f"{details}\n\nThe signed upload URL contains an empty CRC32 checksum. "
+            "Deploy the Tavern app with checksum-free Backblaze upload URLs, then retry."
+        )
+
+    raise RuntimeError(details)
+
+
 def upload_parts(path: pathlib.Path, upload: dict[str, Any]) -> list[dict[str, Any]]:
     parts = []
     part_size = upload["partSizeBytes"]
@@ -529,7 +545,8 @@ def upload_parts(path: pathlib.Path, upload: dict[str, Any]) -> list[dict[str, A
             body = file.read(part_size)
             print(f"Uploading part {part['partNumber']} of {len(upload['parts'])}...")
             response = requests.put(part["url"], data=body, timeout=600)
-            response.raise_for_status()
+            if not response.ok:
+                raise_part_upload_error(response, part["partNumber"])
             etag = response.headers.get("ETag")
             if not etag:
                 raise RuntimeError("Backblaze did not return an ETag for an uploaded part.")
