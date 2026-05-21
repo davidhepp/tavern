@@ -5,11 +5,19 @@ import {
   useFetchOptions,
   useRequestPasswordReset,
 } from "@better-auth-ui/react";
+import { MailCheck } from "lucide-react";
 import { type SyntheticEvent, useState } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   Field,
   FieldDescription,
@@ -35,10 +43,15 @@ export type ForgotPasswordProps = {
  * @returns The forgot-password form UI as a JSX element
  */
 export function ForgotPassword({ className }: ForgotPasswordProps) {
-  const { authClient, basePaths, localization, plugins, viewPaths, Link } =
+  const { authClient, basePaths, baseURL, localization, plugins, viewPaths, navigate, Link } =
     useAuth();
 
   const { fetchOptions, resetFetchOptions } = useFetchOptions();
+  const [resetDialogOpen, setResetDialogOpen] = useState(false);
+
+  const navigateToSignIn = () => {
+    navigate({ to: `${basePaths.auth}/${viewPaths.auth.signIn}` });
+  };
 
   const { mutate: requestPasswordReset, isPending } = useRequestPasswordReset(
     authClient,
@@ -47,7 +60,10 @@ export function ForgotPassword({ className }: ForgotPasswordProps) {
         toast.error(error.error?.message || error.message);
         resetFetchOptions();
       },
-      onSuccess: () => toast.success(localization.auth.passwordResetEmailSent),
+      onSuccess: () => {
+        resetFetchOptions();
+        setResetDialogOpen(true);
+      },
     },
   );
 
@@ -56,6 +72,7 @@ export function ForgotPassword({ className }: ForgotPasswordProps) {
     const formData = new FormData(e.currentTarget);
     requestPasswordReset({
       email: formData.get("email") as string,
+      redirectTo: `${baseURL}${basePaths.auth}/${viewPaths.auth.resetPassword}`,
       fetchOptions,
     });
   }
@@ -69,70 +86,100 @@ export function ForgotPassword({ className }: ForgotPasswordProps) {
   }>({});
 
   return (
-    <Card className={cn("w-full max-w-sm", className)}>
-      <CardHeader>
-        <CardTitle className="text-xl font-semibold">
-          {localization.auth.forgotPassword}
-        </CardTitle>
-      </CardHeader>
+    <>
+      <Dialog
+        open={resetDialogOpen}
+        onOpenChange={(open) => {
+          setResetDialogOpen(open);
 
-      <CardContent>
-        <form onSubmit={handleSubmit}>
-          <FieldGroup>
-            <Field data-invalid={!!fieldErrors.email}>
-              <Label htmlFor="email">{localization.auth.email}</Label>
-
-              <Input
-                id="email"
-                name="email"
-                type="email"
-                autoComplete="email"
-                placeholder={localization.auth.emailPlaceholder}
-                required
-                disabled={isPending}
-                onChange={() => {
-                  setFieldErrors((prev) => ({
-                    ...prev,
-                    email: undefined,
-                  }));
-                }}
-                onInvalid={(e) => {
-                  e.preventDefault();
-
-                  setFieldErrors((prev) => ({
-                    ...prev,
-                    email: (e.target as HTMLInputElement).validationMessage,
-                  }));
-                }}
-                aria-invalid={!!fieldErrors.email}
-              />
-
-              <FieldError>{fieldErrors.email}</FieldError>
-            </Field>
-            {Captcha && <div className="flex justify-center">{Captcha}</div>}
-
-            <div className="flex flex-col gap-3">
-              <Button type="submit" disabled={isPending}>
-                {isPending && <Spinner />}
-
-                {localization.auth.sendResetLink}
-              </Button>
+          if (!open) {
+            navigateToSignIn();
+          }
+        }}
+      >
+        <DialogContent className="max-w-md">
+          <DialogHeader className="items-center text-center">
+            <div className="mb-2 flex size-12 items-center justify-center rounded-lg bg-primary/10 text-primary">
+              <MailCheck className="size-6" />
             </div>
-          </FieldGroup>
-        </form>
+            <DialogTitle>{localization.auth.passwordResetEmailSent}</DialogTitle>
+            <DialogDescription>
+              We sent a password reset link to your email address. Open it to
+              choose a new password, then sign in.
+            </DialogDescription>
+          </DialogHeader>
 
-        <div className="flex flex-col gap-3 items-center w-full mt-4">
-          <FieldDescription className="text-center">
-            {localization.auth.rememberYourPassword}{" "}
-            <Link
-              href={`${basePaths.auth}/${viewPaths.auth.signIn}`}
-              className="underline underline-offset-4"
-            >
-              {localization.auth.signIn}
-            </Link>
-          </FieldDescription>
-        </div>
-      </CardContent>
-    </Card>
+          <Button className="w-full" onClick={navigateToSignIn}>
+            Continue to sign in
+          </Button>
+        </DialogContent>
+      </Dialog>
+
+      <Card className={cn("w-full max-w-sm", className)}>
+        <CardHeader>
+          <CardTitle className="text-xl font-semibold">
+            {localization.auth.forgotPassword}
+          </CardTitle>
+        </CardHeader>
+
+        <CardContent>
+          <form onSubmit={handleSubmit}>
+            <FieldGroup>
+              <Field data-invalid={!!fieldErrors.email}>
+                <Label htmlFor="email">{localization.auth.email}</Label>
+
+                <Input
+                  id="email"
+                  name="email"
+                  type="email"
+                  autoComplete="email"
+                  placeholder={localization.auth.emailPlaceholder}
+                  required
+                  disabled={isPending}
+                  onChange={() => {
+                    setFieldErrors((prev) => ({
+                      ...prev,
+                      email: undefined,
+                    }));
+                  }}
+                  onInvalid={(e) => {
+                    e.preventDefault();
+
+                    setFieldErrors((prev) => ({
+                      ...prev,
+                      email: (e.target as HTMLInputElement).validationMessage,
+                    }));
+                  }}
+                  aria-invalid={!!fieldErrors.email}
+                />
+
+                <FieldError>{fieldErrors.email}</FieldError>
+              </Field>
+              {Captcha && <div className="flex justify-center">{Captcha}</div>}
+
+              <div className="flex flex-col gap-3">
+                <Button type="submit" disabled={isPending}>
+                  {isPending && <Spinner />}
+
+                  {localization.auth.sendResetLink}
+                </Button>
+              </div>
+            </FieldGroup>
+          </form>
+
+          <div className="flex flex-col gap-3 items-center w-full mt-4">
+            <FieldDescription className="text-center">
+              {localization.auth.rememberYourPassword}{" "}
+              <Link
+                href={`${basePaths.auth}/${viewPaths.auth.signIn}`}
+                className="underline underline-offset-4"
+              >
+                {localization.auth.signIn}
+              </Link>
+            </FieldDescription>
+          </div>
+        </CardContent>
+      </Card>
+    </>
   );
 }

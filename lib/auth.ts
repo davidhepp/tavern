@@ -2,6 +2,7 @@ import { betterAuth } from "better-auth";
 import { APIError } from "better-auth/api";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { db } from "@/lib/db";
+import { emailLinkTemplate, sendEmailInBackground } from "@/lib/email";
 import { admin, captcha } from "better-auth/plugins";
 import { and, eq, isNull } from "drizzle-orm";
 
@@ -21,6 +22,38 @@ export const auth = betterAuth({
   emailAndPassword: {
     enabled: true,
     disableSignUp: false,
+    requireEmailVerification: true,
+    sendResetPassword: async ({ user, url }) => {
+      sendEmailInBackground({
+        to: user.email,
+        subject: "Reset your Tavern password",
+        text: `Open this link to reset your Tavern password: ${url}`,
+        html: emailLinkTemplate({
+          title: "Reset your Tavern password",
+          body: "Use this link to choose a new password for your Tavern account. If you did not request this, you can ignore this email.",
+          buttonLabel: "Reset password",
+          url,
+        }),
+      });
+    },
+  },
+  emailVerification: {
+    sendOnSignUp: true,
+    sendOnSignIn: true,
+    autoSignInAfterVerification: true,
+    sendVerificationEmail: async ({ user, url }) => {
+      sendEmailInBackground({
+        to: user.email,
+        subject: "Verify your Tavern email",
+        text: `Open this link to verify your Tavern email address: ${url}`,
+        html: emailLinkTemplate({
+          title: "Verify your Tavern email",
+          body: "Confirm this email address to finish setting up your Tavern account.",
+          buttonLabel: "Verify email",
+          url,
+        }),
+      });
+    },
   },
   databaseHooks: {
     user: {

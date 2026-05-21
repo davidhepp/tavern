@@ -21,6 +21,9 @@ export function Providers({ children }: { children: ReactNode }) {
         authClient={authClient}
         redirectTo="/"
         socialProviders={["github"]}
+        emailAndPassword={{
+          requireEmailVerification: true,
+        }}
         plugins={[
           captchaPlugin({
             render: CloudflareTurnstile,

@@ -3,6 +3,7 @@
 import {
   useAuth,
   useChangePassword,
+  useFetchOptions,
   useListAccounts,
   useRequestPasswordReset,
   useSession
@@ -64,12 +65,24 @@ export function ChangePassword({ className }: ChangePasswordProps) {
 }
 
 function SetPassword({ className }: { className?: string }) {
-  const { authClient, localization } = useAuth()
+  const {
+    authClient,
+    basePaths,
+    baseURL,
+    localization,
+    plugins,
+    viewPaths
+  } = useAuth()
   const { data: session } = useSession(authClient)
+  const { fetchOptions, resetFetchOptions } = useFetchOptions()
 
   const { mutate: requestPasswordReset, isPending } = useRequestPasswordReset(
     authClient,
     {
+      onError: (error) => {
+        toast.error(error.error?.message || error.message)
+        resetFetchOptions()
+      },
       onSuccess: () => toast.success(localization.auth.passwordResetEmailSent)
     }
   )
@@ -77,8 +90,16 @@ function SetPassword({ className }: { className?: string }) {
   const handleSetPassword = () => {
     if (!session) return
 
-    requestPasswordReset({ email: session.user.email })
+    requestPasswordReset({
+      email: session.user.email,
+      redirectTo: `${baseURL}${basePaths.auth}/${viewPaths.auth.resetPassword}`,
+      fetchOptions
+    })
   }
+
+  const Captcha = plugins.find(
+    (plugin) => plugin.captchaComponent
+  )?.captchaComponent
 
   return (
     <div>
@@ -87,26 +108,30 @@ function SetPassword({ className }: { className?: string }) {
       </h2>
 
       <Card className={cn(className)}>
-        <CardContent className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p className="text-sm font-medium leading-tight">
-              {localization.settings.setPassword}
-            </p>
+        <CardContent className="flex flex-col gap-4">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-sm font-medium leading-tight">
+                {localization.settings.setPassword}
+              </p>
 
-            <p className="text-muted-foreground text-xs mt-0.5">
-              {localization.settings.setPasswordDescription}
-            </p>
+              <p className="text-muted-foreground text-xs mt-0.5">
+                {localization.settings.setPasswordDescription}
+              </p>
+            </div>
+
+            <Button
+              size="sm"
+              disabled={isPending || !session}
+              onClick={handleSetPassword}
+            >
+              {isPending && <Spinner />}
+
+              {localization.auth.sendResetLink}
+            </Button>
           </div>
 
-          <Button
-            size="sm"
-            disabled={isPending || !session}
-            onClick={handleSetPassword}
-          >
-            {isPending && <Spinner />}
-
-            {localization.auth.sendResetLink}
-          </Button>
+          {Captcha && <div className="flex justify-center">{Captcha}</div>}
         </CardContent>
       </Card>
     </div>

@@ -10,11 +10,18 @@ import {
   useSignUpEmail,
 } from "@better-auth-ui/react";
 import { useIsMutating } from "@tanstack/react-query";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, MailCheck } from "lucide-react";
 import { type SyntheticEvent, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   Field,
   FieldDescription,
@@ -78,6 +85,11 @@ export function SignUp({
 
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [verificationDialogOpen, setVerificationDialogOpen] = useState(false);
+
+  const navigateToSignIn = () => {
+    navigate({ to: `${basePaths.auth}/${viewPaths.auth.signIn}` });
+  };
 
   const { mutate: signUpEmail, isPending: signUpEmailPending } = useSignUpEmail(
     authClient,
@@ -90,8 +102,8 @@ export function SignUp({
       },
       onSuccess: () => {
         if (emailAndPassword?.requireEmailVerification) {
-          toast.success(localization.auth.verifyYourEmail);
-          navigate({ to: `${basePaths.auth}/${viewPaths.auth.signIn}` });
+          resetFetchOptions();
+          setVerificationDialogOpen(true);
         } else {
           navigate({ to: redirectTo });
         }
@@ -182,8 +194,37 @@ export function SignUp({
     socialProviders.length > 0;
 
   return (
-    <div className={cn("flex w-full max-w-sm flex-col gap-4", className)}>
-      <Card className="w-full">
+    <>
+      <Dialog
+        open={verificationDialogOpen}
+        onOpenChange={(open) => {
+          setVerificationDialogOpen(open);
+
+          if (!open) {
+            navigateToSignIn();
+          }
+        }}
+      >
+        <DialogContent className="max-w-md">
+          <DialogHeader className="items-center text-center">
+            <div className="mb-2 flex size-12 items-center justify-center rounded-lg bg-primary/10 text-primary">
+              <MailCheck className="size-6" />
+            </div>
+            <DialogTitle>{localization.auth.verifyYourEmail}</DialogTitle>
+            <DialogDescription>
+              We sent a verification link to your email address. Open it to
+              activate your Tavern account, then sign in.
+            </DialogDescription>
+          </DialogHeader>
+
+          <Button className="w-full" onClick={navigateToSignIn}>
+            Continue to sign in
+          </Button>
+        </DialogContent>
+      </Dialog>
+
+      <div className={cn("flex w-full max-w-sm flex-col gap-4", className)}>
+        <Card className="w-full">
         <CardHeader>
           <CardTitle className="text-xl font-semibold">
             {localization.auth.signUp}
@@ -516,7 +557,8 @@ export function SignUp({
             </div>
           )}
         </CardContent>
-      </Card>
-    </div>
+        </Card>
+      </div>
+    </>
   );
 }
