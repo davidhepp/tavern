@@ -140,7 +140,7 @@ export default async function AdminGamesPage({
 
             <div className="grid gap-4">
               {selectedGame ? (
-                <Card>
+                <Card key={selectedGame.id}>
                   <CardHeader>
                     <CardTitle>{selectedGame.title}</CardTitle>
                     {selectedGame.summary ? (

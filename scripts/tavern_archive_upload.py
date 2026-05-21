@@ -30,16 +30,14 @@ except ModuleNotFoundError:
 
 
 DEFAULT_REPACK_PASSWORD = "tavern"
-DEFAULT_REPACK_DICTIONARY = "1536m"
+DEFAULT_REPACK_COMPRESSION_LEVEL = 3
+DEFAULT_REPACK_DICTIONARY = "64m"
+DEFAULT_REPACK_FAST_BYTES = 32
 REPACK_DICTIONARY_FALLBACKS = (
-    "1536m",
-    "1024m",
-    "768m",
-    "512m",
-    "384m",
-    "256m",
-    "128m",
     "64m",
+    "32m",
+    "16m",
+    "8m",
 )
 SEVEN_ZIP_MEMORY_ERROR_EXIT_CODE = 8
 DIRECT_DOWNLOAD_EXTENSIONS = {
@@ -374,6 +372,8 @@ def repack_archive(
     output_path: pathlib.Path,
     password: str,
     dictionary: str,
+    compression_level: int,
+    fast_bytes: int,
 ) -> None:
     if output_path.exists():
         output_path.unlink()
@@ -382,11 +382,11 @@ def repack_archive(
         seven_zip,
         "a",
         "-t7z",
-        "-mx=9",
+        f"-mx={compression_level}",
         "-m0=lzma2",
         f"-md={dictionary}",
-        "-mfb=273",
-        "-ms=on",
+        f"-mfb={fast_bytes}",
+        "-ms=off",
         "-mhe=on",
         f"-p{password}",
         str(output_path),
@@ -437,6 +437,8 @@ def repack_archive_with_fallbacks(
     output_path: pathlib.Path,
     password: str,
     dictionary: str,
+    compression_level: int,
+    fast_bytes: int,
 ) -> str:
     attempts = repack_dictionary_attempts(dictionary)
 
@@ -447,7 +449,15 @@ def repack_archive_with_fallbacks(
             print(f"Using 7z dictionary: {attempt}")
 
         try:
-            repack_archive(seven_zip, source_dir, output_path, password, attempt)
+            repack_archive(
+                seven_zip,
+                source_dir,
+                output_path,
+                password,
+                attempt,
+                compression_level,
+                fast_bytes,
+            )
             return attempt
         except CommandError as error:
             if error.returncode != SEVEN_ZIP_MEMORY_ERROR_EXIT_CODE:
@@ -456,7 +466,7 @@ def repack_archive_with_fallbacks(
             if index == len(attempts) - 1:
                 raise SystemExit(
                     "7-Zip could not allocate enough memory even with the smallest "
-                    f"dictionary fallback ({attempt}). Retry with --dictionary 32m "
+                    f"dictionary fallback ({attempt}). Retry with --dictionary 4m "
                     "or use a VPS with more RAM."
                 ) from error
 
@@ -569,9 +579,24 @@ def parse_args() -> argparse.Namespace:
         "--dictionary",
         default=DEFAULT_REPACK_DICTIONARY,
         help=(
-            "Initial 7z dictionary size for compression. The script retries with "
-            "smaller dictionaries if 7-Zip runs out of memory."
+            "Initial 7z dictionary size for compression. Defaults to 64m for weaker "
+            "machines. The script retries with smaller dictionaries if 7-Zip runs "
+            "out of memory."
         ),
+    )
+    parser.add_argument(
+        "--compression-level",
+        type=int,
+        choices=range(0, 10),
+        default=DEFAULT_REPACK_COMPRESSION_LEVEL,
+        metavar="0-9",
+        help="7z compression level. Defaults to 3 to keep CPU and memory usage modest.",
+    )
+    parser.add_argument(
+        "--fast-bytes",
+        type=int,
+        default=DEFAULT_REPACK_FAST_BYTES,
+        help="7z LZMA2 fast-bytes value. Defaults to 32 for faster, lighter repacking.",
     )
     parser.add_argument("--work-dir", help="Directory for temporary extraction/repacking.")
     parser.add_argument("--keep-work", action="store_true", help="Do not delete work files.")
@@ -610,6 +635,8 @@ def main() -> int:
             output_path,
             args.archive_password,
             args.dictionary,
+            args.compression_level,
+            args.fast_bytes,
         )
 
         print(
