@@ -17,6 +17,7 @@
     "@better-auth-ui/core": "^1.6.8",
     "@better-auth-ui/react": "^1.6.8",
     "@better-auth/drizzle-adapter": "^1.6.11",
+    "@marsidev/react-turnstile": "^1.5.2",
     "@neondatabase/serverless": "^1.1.0",
     "@tanstack/react-pacer": "^0.22.1",
     "@tanstack/react-query": "^5.100.11",
