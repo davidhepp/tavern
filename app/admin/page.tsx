@@ -586,7 +586,7 @@ function UserRow({ user, selected }: { user: AdminUser; selected: boolean }) {
         <p className="text-xs text-muted-foreground">Created {formatDateTime(user.createdAt)}</p>
       </div>
       <Button variant={selected ? "default" : "outline"} asChild>
-        <Link href={`/admin?userId=${user.id}`}>Open</Link>
+        <Link href={`/admin?userId=${user.id}`} scroll={false}>Open</Link>
       </Button>
     </div>
   );

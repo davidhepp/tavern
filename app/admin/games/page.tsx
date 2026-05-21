@@ -116,7 +116,7 @@ export default async function AdminGamesPage({
                         className="h-auto w-full justify-start px-3 py-2"
                         asChild
                       >
-                        <Link href={`/admin/games?gameId=${game.id}`}>
+                        <Link href={`/admin/games?gameId=${game.id}`} scroll={false}>
                           <div className="min-w-0 text-left">
                             <p className="truncate text-sm font-medium">
                               {game.title}
