@@ -95,7 +95,13 @@ export function FileUploadManager({
     [gameId, games],
   );
 
+  const dev = process.env.NODE_ENV === "development";
+
   function queueFiles(files: File[]) {
+    if (dev) {
+      toast.info("Uploads are disabled in development.");
+      return;
+    }
     if (!files.length) return;
 
     const items = files.map((file) => {
@@ -414,6 +420,7 @@ export function FileUploadManager({
     router.refresh();
   }
 
+  
   return (
     <div className="grid gap-4">
       <div

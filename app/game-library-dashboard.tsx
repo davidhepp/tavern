@@ -135,7 +135,7 @@ export function GameLibraryDashboard({
                   <div className="-mt-4 px-2 pt-2">
                     <div
                       aria-hidden="true"
-                      className="h-44 w-full rounded-lg bg-muted bg-cover bg-[center_38%]"
+                      className="h-44 w-full rounded-lg bg-muted bg-cover bg-position-[center_38%]"
                       style={{ backgroundImage: `url(${game.coverUrl})` }}
                     />
                   </div>
