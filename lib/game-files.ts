@@ -39,24 +39,22 @@ export async function getGameFile(fileId: string) {
 
 export async function recordGameFileDownload({
   fileId,
+  ipAddress,
+  userAgent,
   userId,
 }: {
   fileId: string;
+  ipAddress?: string | null;
+  userAgent?: string | null;
   userId: string;
 }) {
-  await db
-    .insert(gameFileDownload)
-    .values({
-      id: crypto.randomUUID(),
-      fileId,
-      userId,
-    })
-    .onConflictDoUpdate({
-      target: [gameFileDownload.fileId, gameFileDownload.userId],
-      set: {
-        updatedAt: new Date(),
-      },
-    });
+  await db.insert(gameFileDownload).values({
+    id: crypto.randomUUID(),
+    fileId,
+    ipAddress: ipAddress || null,
+    userAgent: userAgent || null,
+    userId,
+  });
 }
 
 export async function getGameStorageBytes(

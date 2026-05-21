@@ -11,7 +11,8 @@ export async function GET(
   _request: Request,
   { params }: { params: Promise<{ fileId: string }> },
 ) {
-  const session = await auth.api.getSession({ headers: await headers() });
+  const requestHeaders = await headers();
+  const session = await auth.api.getSession({ headers: requestHeaders });
 
   if (!session) {
     return Response.json({ error: "Authentication required." }, { status: 401 });
@@ -32,6 +33,8 @@ export async function GET(
 
   await recordGameFileDownload({
     fileId: file.id,
+    ipAddress: requestHeaders.get("x-forwarded-for")?.split(",")[0]?.trim(),
+    userAgent: requestHeaders.get("user-agent"),
     userId: session.user.id,
   });
   revalidatePath("/");

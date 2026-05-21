@@ -40,11 +40,11 @@ export async function getGameLibrary({ includeArchived = false } = {}) {
       userId: user.id,
       name: user.name,
       email: user.email,
-      downloadedAt: gameFileDownload.updatedAt,
+      downloadedAt: gameFileDownload.createdAt,
     })
     .from(gameFileDownload)
     .innerJoin(user, eq(gameFileDownload.userId, user.id))
-    .orderBy(asc(user.name), asc(user.email));
+    .orderBy(desc(gameFileDownload.createdAt));
 
   return games.map((item) => ({
     ...item,

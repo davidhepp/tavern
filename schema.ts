@@ -209,6 +209,8 @@ export const gameFileDownload = pgTable(
     userId: text("user_id")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
+    ipAddress: text("ip_address"),
+    userAgent: text("user_agent"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at")
       .defaultNow()
@@ -216,12 +218,9 @@ export const gameFileDownload = pgTable(
       .notNull(),
   },
   (table) => [
-    uniqueIndex("game_file_download_file_user_idx").on(
-      table.fileId,
-      table.userId,
-    ),
     index("game_file_download_file_id_idx").on(table.fileId),
     index("game_file_download_user_id_idx").on(table.userId),
+    index("game_file_download_created_at_idx").on(table.createdAt),
   ],
 );
 

@@ -1,6 +1,13 @@
 "use client";
 
-import { Gamepad2, Home, Users } from "lucide-react";
+import {
+  ChartNoAxesColumn,
+  Download,
+  Gamepad2,
+  Home,
+  Ticket,
+  Users,
+} from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -10,7 +17,10 @@ import { cn } from "@/lib/utils";
 
 const items = [
   { href: "/", label: "Dashboard", icon: Home },
-  { href: "/admin", label: "Accounts", icon: Users },
+  { href: "/admin", label: "Overview", icon: ChartNoAxesColumn },
+  { href: "/admin/users", label: "Users", icon: Users },
+  { href: "/admin/invitations", label: "Invitations", icon: Ticket },
+  { href: "/admin/downloads", label: "Downloads", icon: Download },
   { href: "/admin/games", label: "Game library", icon: Gamepad2 },
 ];
 
