@@ -29,6 +29,7 @@ const platformOptions = [
   "Switch",
   "Mobile",
   "Web",
+  "Online",
 ];
 
 const resourceTypes = [

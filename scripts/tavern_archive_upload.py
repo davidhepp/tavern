@@ -178,6 +178,10 @@ def safe_filename(value: str) -> str:
     return value or "downloaded-archive"
 
 
+def tavern_filename(value: str) -> str:
+    return re.sub("ofme", "TAVERN", value, flags=re.I)
+
+
 def filename_from_content_disposition(value: str | None) -> str | None:
     if not value:
         return None
@@ -626,7 +630,7 @@ def main() -> int:
         output_name = args.output_name or f"{source_path.stem}.7z"
         if not output_name.lower().endswith(".7z"):
             output_name = f"{output_name}.7z"
-        output_path = work_dir / safe_filename(output_name)
+        output_path = work_dir / safe_filename(tavern_filename(output_name))
 
         print("Repacking archive...")
         used_dictionary = repack_archive_with_fallbacks(
