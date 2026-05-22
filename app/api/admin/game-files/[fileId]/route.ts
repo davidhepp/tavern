@@ -3,6 +3,7 @@ import { revalidatePath } from "next/cache";
 
 import { requireAdminRouteActor } from "@/lib/admin-auth";
 import { db } from "@/lib/db";
+import { touchGame } from "@/lib/game-activity";
 import { deleteGameFileObject } from "@/lib/storage/backblaze";
 import { gameFile } from "@/schema";
 
@@ -26,6 +27,10 @@ export async function DELETE(
 
   await deleteGameFileObject(file.storageKey);
   await db.delete(gameFile).where(eq(gameFile.id, fileId));
+  await touchGame(
+    file.gameId,
+    actor.type === "session" ? actor.uploadedBy : undefined,
+  );
 
   revalidatePath("/");
   revalidatePath("/admin/games");

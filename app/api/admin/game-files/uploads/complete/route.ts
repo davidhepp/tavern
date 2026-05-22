@@ -7,6 +7,7 @@ import {
 import { ensureGameQuota, gameExists } from "@/lib/game-files";
 import { requireAdminRouteActor } from "@/lib/admin-auth";
 import { db } from "@/lib/db";
+import { touchGame } from "@/lib/game-activity";
 import {
   completeMultipartUpload,
   headGameFileObject,
@@ -125,6 +126,10 @@ export async function POST(request: Request) {
       uploadedBy: actor.uploadedBy,
     })
     .returning();
+  await touchGame(
+    gameId,
+    actor.type === "session" ? actor.uploadedBy : undefined,
+  );
 
   revalidatePath("/");
   revalidatePath("/admin/games");

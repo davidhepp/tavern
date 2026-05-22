@@ -7,11 +7,11 @@ import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { forbidden, redirect } from "next/navigation";
 
-import { AdminNav } from "@/app/admin/admin-nav";
+import { AdminNav } from "@/components/admin/admin-nav";
 import {
   InvitationHistoryCard,
   type InvitationHistoryItem,
-} from "@/app/admin/invitation-history-card";
+} from "@/components/admin/invitation-history-card";
 import { Button } from "@/components/ui/button";
 import {
   Card,

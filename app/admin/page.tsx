@@ -15,7 +15,7 @@ import Link from "next/link";
 import { forbidden, redirect } from "next/navigation";
 import type { ComponentType } from "react";
 
-import { AdminNav } from "@/app/admin/admin-nav";
+import { AdminNav } from "@/components/admin/admin-nav";
 import { Button } from "@/components/ui/button";
 import {
   Card,

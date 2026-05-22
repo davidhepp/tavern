@@ -16,7 +16,7 @@ import Link from "next/link";
 import { forbidden, redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 
-import { AdminNav } from "@/app/admin/admin-nav";
+import { AdminNav } from "@/components/admin/admin-nav";
 import { Button } from "@/components/ui/button";
 import {
   Card,

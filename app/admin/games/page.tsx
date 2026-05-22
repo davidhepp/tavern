@@ -13,7 +13,7 @@ import Link from "next/link";
 import { forbidden, redirect } from "next/navigation";
 import type { ReactNode } from "react";
 
-import { AdminNav } from "@/app/admin/admin-nav";
+import { AdminNav } from "@/components/admin/admin-nav";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -35,13 +35,13 @@ import {
   updateGameAction,
   updateResourceAction,
 } from "@/app/admin/games/actions";
-import { GameActionToaster } from "@/app/admin/games/action-toaster";
-import { FileUploadManager } from "@/app/admin/games/file-upload-manager";
+import { GameActionToaster } from "@/components/admin/games/action-toaster";
+import { FileUploadManager } from "@/components/admin/games/file-upload-manager";
 import {
   PlatformMultiSelect,
   ResourceTypeSelect,
   TitleInput,
-} from "@/app/admin/games/form-controls";
+} from "@/components/admin/games/form-controls";
 import { auth } from "@/lib/auth";
 import { getDeployVersion } from "@/lib/deploy-version";
 import { getGameLibrary } from "@/lib/game-library";

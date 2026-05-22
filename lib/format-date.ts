@@ -1,5 +1,5 @@
 export const appTimeZone = "Europe/Berlin";
-export const appLocale = "de-DE";
+export const appLocale = "en-GB";
 
 const dateFormatter = new Intl.DateTimeFormat(appLocale, {
   dateStyle: "short",
@@ -12,7 +12,7 @@ const dateTimeFormatter = new Intl.DateTimeFormat(appLocale, {
   timeZone: appTimeZone,
 });
 
-function appDate(value: Date | string) {
+export function appDate(value: Date | string) {
   if (value instanceof Date) return value;
 
   const hasExplicitTimeZone = /(?:z|[+-]\d{2}:?\d{2})$/i.test(value);

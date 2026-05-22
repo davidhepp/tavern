@@ -3,7 +3,7 @@ import { dehydrate, HydrationBoundary } from "@tanstack/react-query";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
-import { GameLibraryDashboard } from "@/app/game-library-dashboard";
+import { GameLibraryDashboard } from "@/components/game-library/game-library-dashboard";
 import { auth } from "@/lib/auth";
 import { getGameLibrary, getGameLibraryStats } from "@/lib/game-library";
 import { getQueryClient } from "@/lib/query-client";

@@ -7,6 +7,7 @@ import { revalidatePath } from "next/cache";
 
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { touchGame } from "@/lib/game-activity";
 import { game, gameResource } from "@/schema";
 
 function valueFrom(formData: FormData, key: string) {
@@ -153,6 +154,7 @@ export async function createResourceAction(formData: FormData) {
       createdBy: session.user.id,
       updatedBy: session.user.id,
     });
+    await touchGame(gameId, session.user.id);
   } catch {
     redirect(adminGamesUrl({ gameId, error: "resource-create-failed" }));
   }
@@ -179,6 +181,7 @@ export async function updateResourceAction(formData: FormData) {
         updatedAt: new Date(),
       })
       .where(eq(gameResource.id, valueFrom(formData, "resourceId")));
+    await touchGame(gameId, session.user.id);
   } catch {
     redirect(adminGamesUrl({ gameId, error: "resource-update-failed" }));
   }
@@ -189,13 +192,14 @@ export async function updateResourceAction(formData: FormData) {
 }
 
 export async function deleteResourceAction(formData: FormData) {
-  await requireAdmin();
+  const session = await requireAdmin();
   const gameId = valueFrom(formData, "gameId");
 
   try {
     await db
       .delete(gameResource)
       .where(eq(gameResource.id, valueFrom(formData, "resourceId")));
+    await touchGame(gameId, session.user.id);
   } catch {
     redirect(adminGamesUrl({ gameId, error: "resource-delete-failed" }));
   }

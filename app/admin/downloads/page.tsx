@@ -5,7 +5,7 @@ import { headers } from "next/headers";
 import { forbidden, redirect } from "next/navigation";
 import type { ComponentType } from "react";
 
-import { AdminNav } from "@/app/admin/admin-nav";
+import { AdminNav } from "@/components/admin/admin-nav";
 import {
   Card,
   CardContent,
