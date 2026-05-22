@@ -6,6 +6,7 @@ import {
   Settings,
 } from "lucide-react";
 import Link from "next/link";
+import type { ReactNode } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -19,6 +20,7 @@ import {
 import { formatDateTime } from "@/lib/format-date";
 import { formatBytes } from "@/lib/game-file-constraints";
 import type { GameWithResources } from "@/lib/game-library";
+import { cn } from "@/lib/utils";
 
 import { latestGameUpdate, resourceIcon } from "./library-utils";
 
@@ -28,23 +30,34 @@ type GameCardProps = {
 };
 
 export function GameCard({ game, isAdmin }: GameCardProps) {
+  const updatedAt = latestGameUpdate(game);
+
   return (
     <Card className="min-h-full">
-      {game.coverUrl ? <GameCover coverUrl={game.coverUrl} /> : null}
+      {game.coverUrl ? (
+        <GameCover coverUrl={game.coverUrl}>
+          <UpdatedBadge updatedAt={updatedAt} className="absolute left-2 top-2" />
+          {isAdmin ? (
+            <AdminGameLink
+              game={game}
+              className="absolute right-2 top-2 bg-background/90 shadow-sm backdrop-blur-sm"
+            />
+          ) : null}
+        </GameCover>
+      ) : null}
       <CardHeader>
         <CardTitle>{game.title}</CardTitle>
         {game.summary ? (
           <CardDescription>{game.summary}</CardDescription>
         ) : null}
-        <CardAction>
-          <div className="flex flex-wrap justify-end gap-2">
-            {isAdmin ? <AdminGameLink game={game} /> : null}
-            <span className="inline-flex items-center gap-1 rounded-md bg-muted px-2 py-1 text-xs text-muted-foreground">
-              <Clock3 className="size-3" />
-              Updated {formatDateTime(latestGameUpdate(game))}
-            </span>
-          </div>
-        </CardAction>
+        {!game.coverUrl ? (
+          <CardAction>
+            <div className="flex flex-wrap justify-end gap-2">
+              {isAdmin ? <AdminGameLink game={game} /> : null}
+              <UpdatedBadge updatedAt={updatedAt} />
+            </div>
+          </CardAction>
+        ) : null}
       </CardHeader>
       <CardContent className="space-y-3">
         <DownloadList files={game.files} />
@@ -57,23 +70,57 @@ export function GameCard({ game, isAdmin }: GameCardProps) {
   );
 }
 
-function GameCover({ coverUrl }: { coverUrl: string }) {
+function GameCover({
+  children,
+  coverUrl,
+}: {
+  children?: ReactNode;
+  coverUrl: string;
+}) {
   return (
     <div className="-mt-4 px-2 pt-2">
       <div
-        aria-hidden="true"
-        className="h-44 w-full rounded-lg bg-muted bg-cover bg-position-[center_38%]"
+        className="relative h-44 w-full rounded-lg bg-muted bg-cover bg-position-[center_38%]"
         style={{ backgroundImage: `url(${coverUrl})` }}
-      />
+      >
+        {children}
+      </div>
     </div>
   );
 }
 
-function AdminGameLink({ game }: { game: GameWithResources }) {
+function UpdatedBadge({
+  className,
+  updatedAt,
+}: {
+  className?: string;
+  updatedAt: Date;
+}) {
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center gap-1 rounded-md bg-background/90 px-2 py-1 text-xs text-foreground shadow-sm backdrop-blur-sm",
+        className,
+      )}
+    >
+      <Clock3 className="size-3" />
+      Updated {formatDateTime(updatedAt)}
+    </span>
+  );
+}
+
+function AdminGameLink({
+  className,
+  game,
+}: {
+  className?: string;
+  game: GameWithResources;
+}) {
   return (
     <Button
       variant="outline"
       size="icon-sm"
+      className={className}
       aria-label={`Configure ${game.title}`}
       asChild
     >
