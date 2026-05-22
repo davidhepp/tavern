@@ -2,6 +2,7 @@ import { viewPaths } from "@better-auth-ui/core";
 import { notFound } from "next/navigation";
 
 import { Auth } from "@/components/auth/auth";
+import { AuthShell } from "@/components/auth/auth-shell";
 
 export default async function AuthPage({
   params,
@@ -17,8 +18,8 @@ export default async function AuthPage({
   }
 
   return (
-    <div className="flex justify-center my-auto p-4 md:p-6">
+    <AuthShell>
       <Auth path={path} />
-    </div>
+    </AuthShell>
   );
 }

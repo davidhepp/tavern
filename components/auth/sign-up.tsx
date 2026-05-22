@@ -86,6 +86,7 @@ export function SignUp({
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [verificationDialogOpen, setVerificationDialogOpen] = useState(false);
+  const [invitationHelpOpen, setInvitationHelpOpen] = useState(false);
 
   const navigateToSignIn = () => {
     navigate({ to: `${basePaths.auth}/${viewPaths.auth.signIn}` });
@@ -222,6 +223,17 @@ export function SignUp({
           </Button>
         </DialogContent>
       </Dialog>
+      <Dialog open={invitationHelpOpen} onOpenChange={setInvitationHelpOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Why do I need an invitation?</DialogTitle>
+            <DialogDescription>
+              Tavern is invite only. You need to be invited by an existing
+              member before you can create an account.
+            </DialogDescription>
+          </DialogHeader>
+        </DialogContent>
+      </Dialog>
 
       <div className={cn("flex w-full max-w-sm flex-col gap-4", className)}>
         <Card className="w-full">
@@ -319,7 +331,19 @@ export function SignUp({
                   </Field>
 
                   <Field data-invalid={!!fieldErrors.invitationCode}>
-                    <Label htmlFor="invitationCode">Invitation code</Label>
+                    <div className="flex items-center gap-2">
+                      <Label htmlFor="invitationCode">Invitation code</Label>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon-sm"
+                        className="size-5 rounded-full text-xs text-muted-foreground"
+                        aria-label="Explain invitation codes"
+                        onClick={() => setInvitationHelpOpen(true)}
+                      >
+                        ?
+                      </Button>
+                    </div>
 
                     <Input
                       id="invitationCode"
