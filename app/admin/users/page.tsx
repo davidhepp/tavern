@@ -4,7 +4,6 @@ import { dehydrate, HydrationBoundary } from "@tanstack/react-query";
 import {
   Ban,
   KeyRound,
-  LogIn,
   ShieldCheck,
   Trash2,
   UserCog,
@@ -17,6 +16,7 @@ import { forbidden, redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 
 import { AdminNav } from "@/components/admin/admin-nav";
+import { ImpersonateUserButton } from "@/components/admin/users/impersonate-user-button";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -183,27 +183,6 @@ async function revokeSessionsAction(formData: FormData) {
   revalidatePath("/admin/users");
 }
 
-async function impersonateUserAction(formData: FormData) {
-  "use server";
-
-  await auth.api.impersonateUser({
-    body: { userId: valueFrom(formData, "userId") },
-    headers: await requestHeaders(),
-  });
-
-  redirect("/");
-}
-
-async function stopImpersonatingAction() {
-  "use server";
-
-  await auth.api.stopImpersonating({
-    headers: await requestHeaders(),
-  });
-
-  redirect("/admin/users");
-}
-
 async function removeUserAction(formData: FormData) {
   "use server";
 
@@ -337,30 +316,6 @@ export default async function AdminPage({
               </h1>
             </div>
           </header>
-
-          {session.session.impersonatedBy ? (
-            <Card>
-              <CardContent className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <p className="font-medium">Impersonation active</p>
-                  <p className="text-sm text-muted-foreground">
-                    You are currently browsing as another user.
-                  </p>
-                </div>
-                <form action={stopImpersonatingAction}>
-                  <ConfirmSubmitButton
-                    variant="outline"
-                    confirmTitle="Stop impersonating?"
-                    confirmDescription="You will return to your own admin session."
-                    confirmLabel="Stop"
-                  >
-                    <XCircle />
-                    Stop impersonating
-                  </ConfirmSubmitButton>
-                </form>
-              </CardContent>
-            </Card>
-          ) : null}
 
           <section className="grid gap-4 xl:grid-cols-[1fr_420px]">
             <div className="flex flex-col gap-4">
@@ -670,19 +625,7 @@ function UserActionsCard({ user }: { user: AdminUser }) {
         <Separator />
 
         <div className="grid gap-2 sm:grid-cols-2">
-          <form action={impersonateUserAction}>
-            <input type="hidden" name="userId" value={user.id} />
-            <ConfirmSubmitButton
-              variant="outline"
-              className="w-full"
-              confirmTitle="Impersonate this user?"
-              confirmDescription={`You will leave admin as yourself and browse as ${user.email}.`}
-              confirmLabel="Impersonate"
-            >
-              <LogIn />
-              Impersonate
-            </ConfirmSubmitButton>
-          </form>
+          <ImpersonateUserButton email={user.email} userId={user.id} />
           <form action={removeUserAction}>
             <input type="hidden" name="userId" value={user.id} />
             <ConfirmSubmitButton

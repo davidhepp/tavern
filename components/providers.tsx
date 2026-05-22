@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { ReactNode } from "react";
 import { CloudflareTurnstile } from "@/components/auth/cloudflare-turnstile";
+import { ImpersonationBanner } from "@/components/auth/impersonation-banner";
 import { authClient } from "@/lib/auth-client";
 import { getQueryClient } from "@/lib/query-client";
 import { AuthProvider } from "./auth/auth-provider";
@@ -34,6 +35,7 @@ export function Providers({ children }: { children: ReactNode }) {
         }
         Link={Link}
       >
+        <ImpersonationBanner />
         {children}
 
         <Toaster />
