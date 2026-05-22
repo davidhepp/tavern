@@ -40,7 +40,7 @@ export function GameCard({ game, isAdmin }: GameCardProps) {
           {isAdmin ? (
             <AdminGameLink
               game={game}
-              className="absolute right-2 top-2 bg-background/90 shadow-sm backdrop-blur-sm"
+              className="absolute right-2 top-2 size-6 bg-background/90 shadow-sm backdrop-blur-sm [&_svg]:size-3"
             />
           ) : null}
         </GameCover>
