@@ -5,7 +5,6 @@ import { db } from "@/lib/db";
 import { emailLinkTemplate, sendEmailInBackground } from "@/lib/email";
 import { admin, captcha } from "better-auth/plugins";
 import { and, eq, isNull } from "drizzle-orm";
-import { dash } from "@better-auth/infra";
 
 import * as schema from "@/schema";
 
@@ -90,8 +89,7 @@ export const auth = betterAuth({
 
           if (!invitation) {
             throw new APIError("BAD_REQUEST", {
-              message:
-                "This invitation code is invalid or has already been used.",
+              message: "This invitation code is invalid or has already been used.",
             });
           }
 
@@ -119,7 +117,6 @@ export const auth = betterAuth({
     },
   },
   plugins: [
-    dash(),
     admin(),
     captcha({
       provider: "cloudflare-turnstile",
