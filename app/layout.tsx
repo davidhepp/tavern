@@ -18,7 +18,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Tavern",
-  description: "",
+  description: "A private place for your shared game library.",
 };
 
 export default function RootLayout({
