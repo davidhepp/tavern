@@ -99,7 +99,7 @@ function UpdatedBadge({
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1 rounded-md bg-background/90 px-2 py-1 text-xs text-foreground shadow-sm backdrop-blur-sm",
+        "inline-flex items-center gap-1 rounded-md border border-white/35 bg-background/55 px-2 py-1 text-xs text-foreground shadow-[0_4px_12px_rgba(0,0,0,0.18)] backdrop-blur-md",
         className,
       )}
     >
