@@ -5,7 +5,7 @@ import { db } from "@/lib/db";
 import { emailLinkTemplate, sendEmailInBackground } from "@/lib/email";
 import { admin, captcha } from "better-auth/plugins";
 import { and, eq, isNull } from "drizzle-orm";
-import { dash } from "@better-auth/infra";
+import { dash, sentinel } from "@better-auth/infra";
 
 import * as schema from "@/schema";
 
@@ -125,6 +125,7 @@ export const auth = betterAuth({
       provider: "cloudflare-turnstile",
       secretKey: process.env.TURNSTILE_SECRET_KEY ?? "",
     }),
+    sentinel(),
   ],
   socialProviders: {
     github: {
