@@ -1,3 +1,7 @@
+## Hard rules
+
+You MUST follow these rules before making any code changes.
+
 <!-- BEGIN:nextjs-agent-rules -->
 
 # This is NOT the Next.js you know
@@ -8,9 +12,35 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 <!-- BEGIN:package-agent-rules -->
 
-# IMPORTANT:
+# Package manager
 
-Only use bun package manager. Not yarn, not npm, not pnpm, but bun.
-Do not run the dev server unless I specifically ask you to.
+Use `bun` only.
+
+Allowed:
+
+- `bun install`
+- `bun add`
+- `bun remove`
+- `bun run <script>`
+- `bunx <command>`
+
+Forbidden:
+
+- `npm`
+- `npx`
+- `yarn`
+- `pnpm`
+
+For one-off CLI commands, use `bunx`, not `npx`.
+
+# Dev server
+
+Do not run the dev server unless explicitly requested.
+
+Forbidden unless explicitly asked:
+
+- `bun dev`
+- `bun run dev`
+- `next dev`
 
 <!-- END:package-agent-rules -->
