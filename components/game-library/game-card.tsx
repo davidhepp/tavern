@@ -36,7 +36,10 @@ export function GameCard({ game, isAdmin }: GameCardProps) {
     <Card className="min-h-full">
       {game.coverUrl ? (
         <GameCover coverUrl={game.coverUrl}>
-          <UpdatedBadge updatedAt={updatedAt} className="absolute left-2 top-2" />
+          <UpdatedBadge
+            updatedAt={updatedAt}
+            className="absolute left-2 top-2"
+          />
           {isAdmin ? (
             <AdminGameLink
               game={game}
@@ -151,8 +154,7 @@ function DownloadList({ files }: { files: GameWithResources["files"] }) {
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-medium">{file.filename}</p>
             <p className="mt-1 text-xs text-muted-foreground">
-              {formatBytes(file.sizeBytes)} · Uploaded{" "}
-              {formatDateTime(file.createdAt)}
+              {formatBytes(file.sizeBytes)} · {formatDateTime(file.createdAt)}
             </p>
           </div>
           <Button size="sm" asChild>
